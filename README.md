@@ -7,6 +7,7 @@ A fast, intelligent MySQL database dumping tool that excludes noisy table data w
 When dumping production databases for development, you often don't need millions of audit log entries, session data, or cache records. These tables can make dumps take hours and consume gigabytes of space.
 
 **dbdump solves this by:**
+
 - Excluding data from noisy tables (audits, sessions, cache, etc.)
 - Always preserving table structure (no broken foreign keys)
 - Reducing dump time from hours to minutes
@@ -55,6 +56,7 @@ dbdump dump -h localhost -u root -p password -d mydb
 ```
 
 This will:
+
 1. Connect to your database
 2. Show all tables with sizes
 3. Pre-select noisy tables based on patterns
@@ -156,6 +158,7 @@ exclude:
 ```
 
 Use it with:
+
 ```bash
 dbdump dump -h localhost -u root -d mydb --config ./project.yaml
 ```
@@ -165,6 +168,7 @@ dbdump dump -h localhost -u root -d mydb --config ./project.yaml
 dbdump includes smart defaults for common Laravel tables:
 
 **Exact matches:**
+
 - audits
 - sessions
 - cache
@@ -177,6 +181,7 @@ dbdump includes smart defaults for common Laravel tables:
 - pulse_aggregates
 
 **Patterns:**
+
 - `telescope_*`
 - `pulse_*`
 - `_cache`
@@ -201,6 +206,7 @@ Result: A complete database dump with empty noisy tables.
 ## Real-World Example
 
 **Before (standard mysqldump):**
+
 - Database: 15GB total
 - Audits table: 12GB (10M rows)
 - Actual data needed: 3GB
@@ -208,6 +214,7 @@ Result: A complete database dump with empty noisy tables.
 - Transfer time: 2+ hours
 
 **After (using dbdump):**
+
 - Excludes: audits, telescope_entries, sessions
 - Output: 3.2GB (structure for all, data for non-noisy)
 - Dump time: 15-20 minutes
