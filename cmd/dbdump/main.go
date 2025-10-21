@@ -309,13 +309,26 @@ func buildExcludeConfig() (config.ExcludeConfig, error) {
 	// Start with defaults
 	excludeConfig = defaults.DefaultExcludes
 
-	// Load project config if provided
+	// Load global config if it exists
+	globalConfig, err := config.LoadGlobalConfig()
+	if err != nil {
+		return excludeConfig, fmt.Errorf("failed to load global config: %w", err)
+	}
+	if globalConfig != nil {
+		excludeConfig = config.MergeExcludes(defaults, globalConfig)
+	}
+
+	// Load project config if provided (overrides global)
 	if configFile != "" {
 		projectConfig, err := config.LoadConfig(configFile)
 		if err != nil {
 			return excludeConfig, fmt.Errorf("failed to load config file: %w", err)
 		}
-		excludeConfig = config.MergeExcludes(defaults, projectConfig)
+		// Create a temporary defaults structure with the current merged config
+		tempDefaults := &config.DefaultConfig{
+			DefaultExcludes: excludeConfig,
+		}
+		excludeConfig = config.MergeExcludes(tempDefaults, projectConfig)
 	}
 
 	// Add CLI-specified excludes
