@@ -139,6 +139,31 @@ dbdump dump -h localhost -u root -d mydb --auto -o daily-backup.sql
 
 ## Configuration
 
+dbdump supports multiple configuration layers that merge together:
+
+1. **Built-in defaults** (always applied)
+2. **Global user config** (`~/.dbdump.yaml`) - optional, applies to all dumps
+3. **Project config** (via `--config` flag) - optional, project-specific
+4. **CLI flags** (highest priority)
+
+For a comprehensive guide, see [USER-GUIDE.md](USER-GUIDE.md).
+
+### Global User Config
+
+Create `~/.dbdump.yaml` for settings that apply to all your dumps:
+
+```yaml
+name: "My Global Config"
+
+exclude:
+  exact:
+    - activity_logs
+    - user_sessions
+  patterns:
+    - "temp_*"
+    - "*_backup"
+```
+
 ### Project Config File
 
 Create a `project.yaml` file in your project:
@@ -221,6 +246,13 @@ Result: A complete database dump with empty noisy tables.
 - Transfer time: 30 minutes
 
 **Time saved: 4-5 hours per database refresh**
+
+## Documentation
+
+- **[USER-GUIDE.md](USER-GUIDE.md)** - Comprehensive user guide with detailed configuration, examples, and troubleshooting
+- **[BENCHMARKING.md](BENCHMARKING.md)** - Performance testing guide
+- **[VERIFIED_PERFORMANCE.md](VERIFIED_PERFORMANCE.md)** - Real-world benchmark results
+- **[CHANGELOG.md](CHANGELOG.md)** - Version history
 
 ## Development
 

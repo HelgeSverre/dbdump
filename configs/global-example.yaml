@@ -1,0 +1,26 @@
+# Example global user config file
+# This file should be placed at: ~/.dbdump.yaml
+#
+# This config is loaded automatically and applies to all dumps.
+# It will be merged with built-in defaults, then overridden by
+# project-specific configs (if provided via --config flag) and
+# finally by CLI flags (--exclude, --exclude-pattern).
+
+name: "My Global Config"
+
+exclude:
+  # Exact table name matches (case-sensitive)
+  exact:
+    - activity_logs
+    - user_sessions
+    - notifications
+    - email_tracking
+    - api_logs
+
+  # Glob-style patterns (* matches any characters, ? matches one character)
+  patterns:
+    - "temp_*"        # Match tables starting with "temp_"
+    - "*_backup"      # Match tables ending with "_backup"
+    - "old_*"         # Match tables starting with "old_"
+    - "staging_*"     # Match tables starting with "staging_"
+    - "*_archive"     # Match tables ending with "_archive"
