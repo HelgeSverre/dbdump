@@ -1,0 +1,12 @@
+# project.yaml
+name: "Project Name"
+
+# Tables to exclude data from (structure will be preserved)
+exclude:
+  exact:
+    - audits
+    - activity_logs
+    - custom_noisy_table
+  patterns:
+    - "temp_*"
+    - "*_cache"

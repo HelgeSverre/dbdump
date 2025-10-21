@@ -1,0 +1,16 @@
+default_excludes:
+  exact:
+    - audits
+    - sessions
+    - cache
+    - cache_locks
+    - failed_jobs
+    - telescope_entries
+    - telescope_entries_tags
+    - telescope_monitoring
+    - pulse_entries
+    - pulse_aggregates
+  patterns:
+    - "telescope_*"
+    - "pulse_*"
+    - "_cache"
