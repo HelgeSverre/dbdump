@@ -117,7 +117,7 @@ func GetGlobalConfigPath() (string, error) {
 		return "", fmt.Errorf("failed to get home directory: %w", err)
 	}
 
-	return filepath.Join(homeDir, ".config", "dbdump", "config.yaml"), nil
+	return filepath.Join(homeDir, ".dbdump.yaml"), nil
 }
 
 // LoadGlobalConfig loads the global user config file if it exists
