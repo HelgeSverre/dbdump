@@ -40,3 +40,6 @@ profiles.yaml
 # Temporary files
 tmp/
 temp/
+
+# Benchmark results
+benchmark-results/
