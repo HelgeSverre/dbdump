@@ -1,4 +1,4 @@
-.PHONY: build install clean test fmt vet build-all help
+.PHONY: build install clean test fmt vet lint tidy build-all help run dev bench bench-quick bench-all bench-compare
 
 # Binary name
 BINARY_NAME=dbdump
@@ -15,7 +15,7 @@ BUILD_TIME?=$(shell date -u '+%Y-%m-%d_%H:%M:%S')
 LDFLAGS=-ldflags "-X main.Version=$(VERSION) -X main.Commit=$(COMMIT) -X main.BuildTime=$(BUILD_TIME)"
 
 # Default target
-all: build
+all: help
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -42,6 +42,23 @@ clean: ## Remove build artifacts
 
 test: ## Run tests
 	go test -v ./...
+
+bench: build ## Run benchmark (default: crescat_dump, 3 iterations)
+	@./scripts/benchmark.sh $(DB) $(ITER)
+
+bench-quick: build ## Quick benchmark (1 iteration)
+	@./scripts/benchmark.sh $(DB) 1
+
+bench-all: build ## Benchmark all available databases
+	@echo "Running benchmarks on all available databases..."
+	@./scripts/benchmark.sh crescat_dump 3
+	@./scripts/benchmark.sh crescat_dump_2 3
+	@./scripts/benchmark.sh crescat_dump_3 3
+
+bench-compare: ## Compare benchmarks before and after changes
+	@echo "Run this to create baseline: make bench DB=crescat_dump ITER=5"
+	@echo "Then make your changes and run: make bench DB=crescat_dump ITER=5"
+	@echo "Results will be in benchmark-results/ directory"
 
 fmt: ## Format code
 	go fmt ./...
