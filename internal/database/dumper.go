@@ -52,7 +52,8 @@ func (d *Dumper) Dump() (*DumpResult, error) {
 	}
 	defer outFile.Close()
 
-	writer := bufio.NewWriter(outFile)
+	// Use 256KB buffer for optimal write performance
+	writer := bufio.NewWriterSize(outFile, 256*1024)
 	defer writer.Flush()
 
 	// Phase 1: Dump structure for all tables
@@ -141,6 +142,13 @@ func (d *Dumper) buildMySQLDumpArgs() []string {
 		"--single-transaction",
 		"--quick",
 		"--lock-tables=false",
+	)
+
+	// Add performance optimization flags
+	args = append(args,
+		"--max-allowed-packet=1G",
+		"--net-buffer-length=1M",
+		"--skip-comments",
 	)
 
 	return args
