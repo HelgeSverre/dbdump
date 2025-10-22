@@ -13,15 +13,6 @@ When dumping production databases for development, you often don't need millions
 - Reducing dump time from hours to minutes
 - Making development database refreshes practical
 
-## Features
-
-- **Smart Defaults**: Pre-configured patterns for common Laravel tables (audits, telescope, pulse, sessions, cache)
-- **Interactive Mode**: Visual table selection with sizes and row counts
-- **Config Files**: Save project-specific exclusion patterns
-- **Fast**: Skip gigabytes of unnecessary data
-- **Safe**: Always preserves table structure
-- **Portable**: Single binary, no dependencies
-
 ## Installation
 
 ### From Source
