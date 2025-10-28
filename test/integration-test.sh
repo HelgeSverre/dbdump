@@ -224,17 +224,21 @@ echo ""
 log_info "Building dbdump..."
 make build || { log_error "Build failed"; exit 1; }
 
-# Start Docker Compose
-log_info "Starting Docker Compose..."
-docker compose up -d
+# Start Docker Compose (skip in CI as services are already running)
+if [ -z "${CI}" ]; then
+    log_info "Starting Docker Compose..."
+    docker compose up -d
+    echo ""
 
-echo ""
-
-# Wait for all databases
-for db_name in "${DB_NAMES[@]}"; do
-    db_port=$(get_db_port "$db_name")
-    wait_for_db "$db_name" "$db_port" || exit 1
-done
+    # Wait for all databases
+    for db_name in "${DB_NAMES[@]}"; do
+        db_port=$(get_db_port "$db_name")
+        wait_for_db "$db_name" "$db_port" || exit 1
+    done
+else
+    log_info "Running in CI - using existing service containers"
+    echo ""
+fi
 
 echo ""
 
@@ -286,13 +290,17 @@ echo ""
 if [ $TESTS_FAILED -eq 0 ]; then
     log_info "All tests passed! ✓"
     echo ""
-    echo "To stop Docker containers: docker compose down"
-    echo "To cleanup volumes: docker compose down -v"
+    if [ -z "${CI}" ]; then
+        echo "To stop Docker containers: docker compose down"
+        echo "To cleanup volumes: docker compose down -v"
+    fi
     exit 0
 else
     log_error "Some tests failed!"
     echo ""
-    echo "To view logs: docker compose logs [mysql57|mysql80|mysql84|mariadb]"
-    echo "To stop: docker compose down"
+    if [ -z "${CI}" ]; then
+        echo "To view logs: docker compose logs [mysql57|mysql80|mysql84|mariadb]"
+        echo "To stop: docker compose down"
+    fi
     exit 1
 fi
