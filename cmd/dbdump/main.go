@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/helgesverre/dbdump/internal/config"
@@ -104,8 +105,12 @@ func runDump(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get password from environment if not provided
+	// Check custom dbdump variable first, then fall back to standard MySQL variable
 	if password == "" {
-		password = os.Getenv("MYSQL_PWD")
+		password = os.Getenv("DBDUMP_MYSQL_PWD")
+		if password == "" {
+			password = os.Getenv("MYSQL_PWD")
+		}
 	}
 
 	// Validate required flags
@@ -125,19 +130,14 @@ func runDump(cmd *cobra.Command, args []string) error {
 		Database: dbName,
 	}
 
-	// Test connection
-	if err := conn.TestConnection(); err != nil {
-		return fmt.Errorf("failed to connect to database: %w", err)
-	}
-
-	ui.PrintSuccess("Connected to database")
-
-	// Connect to database for inspection
+	// Connect to database for inspection (this also tests the connection)
 	db, err := conn.Connect()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to connect to database: %w", err)
 	}
 	defer db.Close()
+
+	ui.PrintSuccess("Connected to database")
 
 	// Get table information
 	inspector := database.NewInspector(db)
@@ -223,8 +223,12 @@ func runDump(cmd *cobra.Command, args []string) error {
 
 func runList(cmd *cobra.Command, args []string) error {
 	// Get password from environment if not provided
+	// Check custom dbdump variable first, then fall back to standard MySQL variable
 	if password == "" {
-		password = os.Getenv("MYSQL_PWD")
+		password = os.Getenv("DBDUMP_MYSQL_PWD")
+		if password == "" {
+			password = os.Getenv("MYSQL_PWD")
+		}
 	}
 
 	// Validate required flags
@@ -261,13 +265,13 @@ func runList(cmd *cobra.Command, args []string) error {
 	// Print table information
 	fmt.Printf("\nTables in database '%s':\n\n", dbName)
 	fmt.Printf("%-40s %12s %15s\n", "Table Name", "Size", "Rows")
-	fmt.Println(string(make([]byte, 70)))
+	fmt.Println(strings.Repeat("-", 70))
 
 	for _, info := range tablesInfo {
 		fmt.Printf("%-40s %12s %15d\n", info.Name, info.SizeDisplay, info.RowCount)
 	}
 
-	fmt.Printf("\nTotal: %d tables\n\n", len(tablesInfo))
+	fmt.Printf("\nTotal: %d tables\n", len(tablesInfo))
 
 	return nil
 }
@@ -283,7 +287,7 @@ func runConfigList(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	fmt.Println("\nSaved connection profiles:\n")
+	fmt.Println("\nSaved connection profiles:")
 	for _, profile := range profiles.Profiles {
 		fmt.Printf("  %s\n", profile.Name)
 		fmt.Printf("    Host: %s:%d\n", profile.Host, profile.Port)

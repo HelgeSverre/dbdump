@@ -1,0 +1,82 @@
+services:
+  # MySQL 5.7 - For testing backward compatibility
+  mysql57:
+    image: mysql:5.7
+    platform: linux/amd64
+    container_name: dbdump-mysql57
+    environment:
+      MYSQL_ROOT_PASSWORD: testpass123
+      MYSQL_DATABASE: testdb
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql57-data:/var/lib/mysql
+      - ./test/init:/docker-entrypoint-initdb.d:ro
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ptest pass123"]
+      timeout: 5s
+      retries: 10
+
+  # MySQL 8.0 - Current production version
+  mysql80:
+    image: mysql:8.0
+    platform: linux/amd64
+    container_name: dbdump-mysql80
+    environment:
+      MYSQL_ROOT_PASSWORD: testpass123
+      MYSQL_DATABASE: testdb
+    ports:
+      - "3308:3306"
+    volumes:
+      - mysql80-data:/var/lib/mysql
+      - ./test/init:/docker-entrypoint-initdb.d:ro
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ptestpass123"]
+      timeout: 5s
+      retries: 10
+
+  # MySQL 8.4 - Latest version
+  mysql84:
+    image: mysql:8.4
+    platform: linux/amd64
+    container_name: dbdump-mysql84
+    environment:
+      MYSQL_ROOT_PASSWORD: testpass123
+      MYSQL_DATABASE: testdb
+    ports:
+      - "3309:3306"
+    volumes:
+      - mysql84-data:/var/lib/mysql
+      - ./test/init:/docker-entrypoint-initdb.d:ro
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --mysql-native-password=ON
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ptestpass123"]
+      timeout: 5s
+      retries: 10
+
+  # MariaDB 10.x - Alternative MySQL-compatible database
+  mariadb:
+    image: mariadb:10.11
+    platform: linux/amd64
+    container_name: dbdump-mariadb
+    environment:
+      MYSQL_ROOT_PASSWORD: testpass123
+      MYSQL_DATABASE: testdb
+    ports:
+      - "3310:3306"
+    volumes:
+      - mariadb-data:/var/lib/mysql
+      - ./test/init:/docker-entrypoint-initdb.d:ro
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ptestpass123"]
+      timeout: 5s
+      retries: 10
+
+volumes:
+  mysql57-data:
+  mysql80-data:
+  mysql84-data:
+  mariadb-data:

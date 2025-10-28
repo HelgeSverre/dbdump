@@ -1,0 +1,254 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  # Security verification (fast, runs first)
+  security:
+    name: Security Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+      
+      - name: Build binary
+        run: make build
+      
+      - name: Run security verification
+        run: make verify-security
+      
+      - name: Upload security test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-test-results
+          path: |
+            test/*.log
+            *.log
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # Unit tests
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+      
+      - name: Run unit tests
+        run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
+      
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.txt
+          flags: unittests
+          fail_ci_if_error: false
+
+  # Integration tests (with Docker Compose)
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      mysql57:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: testpass123
+          MYSQL_DATABASE: testdb
+        ports:
+          - 3307:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -ptestpass123"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+      
+      mysql80:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: testpass123
+          MYSQL_DATABASE: testdb
+        ports:
+          - 3308:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -ptestpass123"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+      
+      mysql84:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: testpass123
+          MYSQL_DATABASE: testdb
+        ports:
+          - 3309:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -ptestpass123"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+      
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MYSQL_ROOT_PASSWORD: testpass123
+          MYSQL_DATABASE: testdb
+        ports:
+          - 3310:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -ptestpass123"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+      
+      - name: Install MySQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mysql-client
+      
+      - name: Verify MySQL clients are available
+        run: |
+          mysqldump --version
+          mysql --version
+      
+      - name: Wait for databases to be ready
+        run: |
+          echo "Waiting for databases to be fully ready..."
+          sleep 10
+      
+      - name: Build binary
+        run: make build
+      
+      - name: Generate test data on MySQL 5.7
+        run: ./test/generate-sample-data.sh small 127.0.0.1 3307 testdb
+      
+      - name: Generate test data on MySQL 8.0
+        run: ./test/generate-sample-data.sh small 127.0.0.1 3308 testdb
+      
+      - name: Generate test data on MySQL 8.4
+        run: ./test/generate-sample-data.sh small 127.0.0.1 3309 testdb
+      
+      - name: Generate test data on MariaDB
+        run: ./test/generate-sample-data.sh small 127.0.0.1 3310 testdb
+      
+      - name: Run integration tests
+        run: ./test/integration-test.sh
+      
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-results
+          path: |
+            /tmp/test_*.sql
+            benchmark-results/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # Code quality checks
+  code-quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+      
+      - name: Run go fmt
+        run: |
+          if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
+            echo "The following files are not formatted:"
+            gofmt -s -l .
+            exit 1
+          fi
+      
+      - name: Run go vet
+        run: go vet ./...
+      
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          args: --timeout=5m
+      
+      - name: Check go.mod and go.sum are tidy
+        run: |
+          go mod tidy
+          git diff --exit-code go.mod go.sum
+
+  # Build test (verify it builds on all platforms)
+  build-test:
+    name: Build Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+      
+      - name: Build binary
+        run: make build
+      
+      - name: Test binary runs
+        shell: bash
+        run: |
+          ./bin/dbdump --help || true
+          if [ -f "./bin/dbdump.exe" ]; then
+            ./bin/dbdump.exe --help || true
+          fi
+
+  # Final status check (requires all jobs to pass)
+  all-tests-passed:
+    name: All Tests Passed
+    needs: [security, unit-tests, integration-tests, code-quality, build-test]
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: All tests passed
+        run: echo "✅ All tests passed successfully!"

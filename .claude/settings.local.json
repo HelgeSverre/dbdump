@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go fmt:*)",
+      "Bash(make test-all:*)",
+      "Bash(docker-compose down:*)",
+      "Bash(mysql:*)",
+      "Bash(./test/generate-sample-data.sh:*)",
+      "Bash(bash:*)",
+      "Bash(tee:*)",
+      "Bash(make build:*)",
+      "Bash(export DBDUMP_MYSQL_PWD=testpass123)",
+      "Bash(./bin/dbdump dump:*)",
+      "Bash(mysqldump --help)",
+      "Bash(mysqldump:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -1,0 +1,216 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v1.1.0)'
+        required: true
+
+jobs:
+  # Run tests before building release
+  test:
+    name: Run Tests Before Release
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+      
+      - name: Run security tests
+        run: make verify-security
+      
+      - name: Run unit tests
+        run: go test -v ./...
+
+  # Build release binaries for all platforms
+  build:
+    name: Build Release Binaries
+    needs: test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Get all tags for version info
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+      
+      - name: Get version
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Build binaries for all platforms
+        run: make build-all
+        env:
+          VERSION: ${{ steps.get_version.outputs.VERSION }}
+      
+      - name: Generate checksums
+        run: |
+          cd bin
+          sha256sum * > checksums.txt
+          cat checksums.txt
+      
+      - name: Create tarball for each platform
+        run: |
+          cd bin
+          
+          # macOS AMD64
+          tar -czf dbdump-${{ steps.get_version.outputs.VERSION }}-darwin-amd64.tar.gz dbdump-darwin-amd64
+          
+          # macOS ARM64
+          tar -czf dbdump-${{ steps.get_version.outputs.VERSION }}-darwin-arm64.tar.gz dbdump-darwin-arm64
+          
+          # Linux AMD64
+          tar -czf dbdump-${{ steps.get_version.outputs.VERSION }}-linux-amd64.tar.gz dbdump-linux-amd64
+          
+          # Linux ARM64
+          tar -czf dbdump-${{ steps.get_version.outputs.VERSION }}-linux-arm64.tar.gz dbdump-linux-arm64
+          
+          # Windows AMD64
+          zip dbdump-${{ steps.get_version.outputs.VERSION }}-windows-amd64.zip dbdump-windows-amd64.exe
+      
+      - name: Upload binaries as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-binaries
+          path: |
+            bin/dbdump-${{ steps.get_version.outputs.VERSION }}-*.tar.gz
+            bin/dbdump-${{ steps.get_version.outputs.VERSION }}-*.zip
+            bin/checksums.txt
+          retention-days: 90
+
+  # Create GitHub Release
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Get version
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-binaries
+          path: ./release-files
+      
+      - name: Extract changelog for this version
+        id: changelog
+        run: |
+          VERSION="${{ steps.get_version.outputs.VERSION }}"
+          VERSION_NUMBER="${VERSION#v}"
+          
+          # Extract section from CHANGELOG.md for this version
+          if [ -f CHANGELOG.md ]; then
+            awk "/^## \[$VERSION_NUMBER\]/,/^## \[/" CHANGELOG.md | sed '$d' > release-notes.md
+            
+            # If nothing extracted, use a default message
+            if [ ! -s release-notes.md ]; then
+              echo "Release $VERSION" > release-notes.md
+              echo "" >> release-notes.md
+              echo "See [CHANGELOG.md](CHANGELOG.md) for full details." >> release-notes.md
+            fi
+          else
+            echo "Release $VERSION" > release-notes.md
+          fi
+          
+          cat release-notes.md
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.get_version.outputs.VERSION }}
+          name: Release ${{ steps.get_version.outputs.VERSION }}
+          body_path: release-notes.md
+          draft: false
+          prerelease: false
+          files: |
+            release-files/*.tar.gz
+            release-files/*.zip
+            release-files/checksums.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Verify release artifacts
+  verify:
+    name: Verify Release
+    needs: release
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            artifact: linux-amd64
+            ext: ""
+          - os: macos-latest
+            artifact: darwin-arm64
+            ext: ""
+          - os: windows-latest
+            artifact: windows-amd64
+            ext: ".exe"
+    
+    steps:
+      - name: Get version
+        id: get_version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-binaries
+          path: ./release-files
+      
+      - name: Extract and test binary
+        shell: bash
+        run: |
+          cd release-files
+          
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            unzip dbdump-${{ steps.get_version.outputs.VERSION }}-${{ matrix.artifact }}.zip
+            chmod +x dbdump-${{ matrix.artifact }}.exe
+            ./dbdump-${{ matrix.artifact }}.exe --help
+          else
+            tar -xzf dbdump-${{ steps.get_version.outputs.VERSION }}-${{ matrix.artifact }}.tar.gz
+            chmod +x dbdump-${{ matrix.artifact }}
+            ./dbdump-${{ matrix.artifact }} --help
+          fi

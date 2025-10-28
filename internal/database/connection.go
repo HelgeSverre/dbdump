@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	_ "github.com/go-sql-driver/mysql"
+	"github.com/go-sql-driver/mysql"
 )
 
 // Connection represents a database connection configuration
@@ -17,14 +17,24 @@ type Connection struct {
 }
 
 // DSN returns the data source name for MySQL connection
+// Uses mysql.Config for proper escaping and timeout configuration
 func (c *Connection) DSN() string {
-	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s",
-		c.User,
-		c.Password,
-		c.Host,
-		c.Port,
-		c.Database,
-	)
+	cfg := mysql.NewConfig()
+	cfg.User = c.User
+	cfg.Passwd = c.Password
+	cfg.Net = "tcp"
+	cfg.Addr = fmt.Sprintf("%s:%d", c.Host, c.Port)
+	cfg.DBName = c.Database
+
+	// Set reasonable timeouts
+	cfg.Params = map[string]string{
+		"timeout":      "5s",
+		"readTimeout":  "30s",
+		"writeTimeout": "30s",
+		"parseTime":    "true",
+	}
+
+	return cfg.FormatDSN()
 }
 
 // Connect establishes a connection to the database

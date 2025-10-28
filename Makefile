@@ -1,4 +1,6 @@
-.PHONY: build install clean test fmt vet lint tidy build-all help run dev bench bench-quick bench-all bench-compare
+.PHONY: build install clean test fmt vet lint tidy build-all help run dev bench bench-quick bench-all bench-compare \
+	test-integration test-integration-quick test-security test-docker-up test-docker-down test-docker-clean \
+	test-data-small test-data-medium test-data-large verify-security
 
 # Binary name
 BINARY_NAME=dbdump
@@ -106,3 +108,69 @@ example-dump: build ## Example: dump database
 
 example-dry-run: build ## Example: dry run
 	./$(BUILD_DIR)/$(BINARY_NAME) dump -h localhost -u root -d mydb --dry-run
+
+## Integration Testing Targets
+
+test-docker-up: ## Start Docker Compose test databases
+	@echo "Starting test databases..."
+	docker-compose up -d
+	@echo "Waiting for databases to be ready (30s)..."
+	@sleep 30
+	@echo "Databases ready!"
+
+test-docker-down: ## Stop Docker Compose test databases
+	@echo "Stopping test databases..."
+	docker-compose down
+
+test-docker-clean: ## Stop Docker and remove all data volumes
+	@echo "Stopping and cleaning test databases..."
+	docker-compose down -v
+	@echo "All test data removed!"
+
+test-data-small: ## Generate small test dataset (~10MB) on MySQL 8.0
+	@echo "Generating small test dataset..."
+	@./test/generate-sample-data.sh small 127.0.0.1 3308 testdb
+
+test-data-medium: ## Generate medium test dataset (~100MB) on MySQL 8.0
+	@echo "Generating medium test dataset..."
+	@./test/generate-sample-data.sh medium 127.0.0.1 3308 testdb
+
+test-data-large: ## Generate large test dataset (~1GB) on MySQL 8.0
+	@echo "Generating large test dataset..."
+	@./test/generate-sample-data.sh large 127.0.0.1 3308 testdb
+
+test-data-all: test-docker-up ## Generate test data on ALL database versions
+	@echo "Generating test data on all databases..."
+	@echo "[1/4] MySQL 5.7..."
+	@./test/generate-sample-data.sh small 127.0.0.1 3307 testdb
+	@echo "[2/4] MySQL 8.0..."
+	@./test/generate-sample-data.sh small 127.0.0.1 3308 testdb
+	@echo "[3/4] MySQL 8.4..."
+	@./test/generate-sample-data.sh small 127.0.0.1 3309 testdb
+	@echo "[4/4] MariaDB..."
+	@./test/generate-sample-data.sh small 127.0.0.1 3310 testdb
+	@echo "Test data generated on all databases!"
+
+verify-security: build ## Verify security fixes (password hiding, file perms)
+	@echo "Running security verification..."
+	@./test/verify-security.sh
+
+test-integration-quick: build test-docker-up test-data-small ## Quick integration test (small data, MySQL 8.0 only)
+	@echo "Running quick integration test..."
+	@export TEST_QUICK=1 && ./test/integration-test.sh
+	@$(MAKE) test-docker-down
+
+test-integration: build test-docker-up test-data-all ## Full integration test (all databases)
+	@echo "Running full integration test suite..."
+	@./test/integration-test.sh
+
+test-integration-clean: test-integration ## Run integration tests then cleanup
+	@$(MAKE) test-docker-clean
+
+test-security: build verify-security ## Run security-specific tests only
+	@echo "Security tests complete!"
+
+test-all: test test-integration ## Run all tests (unit + integration)
+
+test-release: ## Test release build locally (simulates GitHub Actions)
+	@./scripts/test-release.sh $(VERSION)

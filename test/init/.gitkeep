@@ -1,0 +1,2 @@
+# This directory is mounted to /docker-entrypoint-initdb.d in MySQL containers
+# Place .sql or .sh files here to run during database initialization

@@ -1,10 +1,21 @@
 # dbdump
 
+<p align="center">
+     <img src="./art/header.png" alt="Header Image" />
+</p>
+
+
+[![Tests](https://github.com/helgesverre/dbdump/actions/workflows/test.yml/badge.svg)](https://github.com/helgesverre/dbdump/actions/workflows/test.yml)
+[![Release](https://github.com/helgesverre/dbdump/actions/workflows/release.yml/badge.svg)](https://github.com/helgesverre/dbdump/actions/workflows/release.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/helgesverre/dbdump)](https://goreportcard.com/report/github.com/helgesverre/dbdump)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A fast, intelligent MySQL database dumping tool that excludes noisy table data while preserving structure.
 
 ## Why dbdump?
 
-When dumping production databases for development, you often don't need millions of audit log entries, session data, or cache records. These tables can make dumps take hours and consume gigabytes of space.
+When dumping production databases for development, you often don't need millions of audit log entries, session data, or
+cache records. These tables can make dumps take hours and consume gigabytes of space.
 
 **dbdump solves this by:**
 
@@ -15,34 +26,83 @@ When dumping production databases for development, you often don't need millions
 
 ## Installation
 
-### From Source
-
-```bash
-# Clone the repository
-git clone https://github.com/helgesverre/dbdump.git
-cd dbdump
-
-# Build the binary
-make build
-
-# Install to /usr/local/bin
-make install
-```
-
-### Pre-built Binaries
+### Pre-built Binaries (Recommended)
 
 Download the latest release for your platform from the [releases page](https://github.com/helgesverre/dbdump/releases).
 
+#### macOS (Apple Silicon)
+
+```bash
+curl -LO https://github.com/helgesverre/dbdump/releases/latest/download/dbdump-darwin-arm64.tar.gz
+tar -xzf dbdump-darwin-arm64.tar.gz
+chmod +x dbdump-darwin-arm64
+sudo mv dbdump-darwin-arm64 /usr/local/bin/dbdump
+```
+
+#### macOS (Intel)
+
+```bash
+curl -LO https://github.com/helgesverre/dbdump/releases/latest/download/dbdump-darwin-amd64.tar.gz
+tar -xzf dbdump-darwin-amd64.tar.gz
+chmod +x dbdump-darwin-amd64
+sudo mv dbdump-darwin-amd64 /usr/local/bin/dbdump
+```
+
+#### Linux (AMD64)
+
+```bash
+curl -LO https://github.com/helgesverre/dbdump/releases/latest/download/dbdump-linux-amd64.tar.gz
+tar -xzf dbdump-linux-amd64.tar.gz
+chmod +x dbdump-linux-amd64
+sudo mv dbdump-linux-amd64 /usr/local/bin/dbdump
+```
+
+#### Linux (ARM64)
+
+```bash
+curl -LO https://github.com/helgesverre/dbdump/releases/latest/download/dbdump-linux-arm64.tar.gz
+tar -xzf dbdump-linux-arm64.tar.gz
+chmod +x dbdump-linux-arm64
+sudo mv dbdump-linux-arm64 /usr/local/bin/dbdump
+```
+
+#### Windows (AMD64)
+
+Download `dbdump-windows-amd64.zip` from the [releases page](https://github.com/helgesverre/dbdump/releases), extract it, and add the executable to your PATH.
+
+#### Verify Installation
+
+```bash
+dbdump --help
+```
+
 ### Requirements
 
-- Go 1.21+ (for building from source)
-- MySQL client tools (`mysqldump` must be in your PATH)
+- **MySQL client tools** - `mysqldump` must be in your PATH (comes with MySQL client)
+  - macOS: `brew install mysql-client`
+  - Ubuntu/Debian: `sudo apt-get install mysql-client`
+  - CentOS/RHEL: `sudo yum install mysql`
+
+### From Source (Developers)
+
+```bash
+git clone https://github.com/helgesverre/dbdump.git
+cd dbdump
+make install
+```
+
+Requires Go 1.21+.
 
 ## Quick Start
 
 ### Interactive Mode (Default)
 
 ```bash
+# Recommended: Use environment variable for password
+export DBDUMP_MYSQL_PWD=yourpassword
+dbdump dump -h localhost -u root -d mydb
+
+# Or provide password as flag (less secure)
 dbdump dump -h localhost -u root -p password -d mydb
 ```
 
@@ -73,8 +133,11 @@ dbdump dump -h localhost -u root -d mydb --config ./project.yaml
 ### Basic Commands
 
 ```bash
+# Set password securely via environment variable
+export DBDUMP_MYSQL_PWD=yourpassword
+
 # Dump database (interactive)
-dbdump dump -h localhost -u root -p password -d mydb
+dbdump dump -h localhost -u root -d mydb
 
 # List tables with sizes
 dbdump list -h localhost -u root -d mydb
@@ -92,7 +155,7 @@ dbdump dump -h localhost -u root -d mydb -o backup.sql
 -H, --host        Database host (default: 127.0.0.1)
 -P, --port        Database port (default: 3306)
 -u, --user        Database user
--p, --password    Database password (or use MYSQL_PWD env)
+-p, --password    Database password (or use DBDUMP_MYSQL_PWD/MYSQL_PWD env)
 -d, --database    Database name
 ```
 
@@ -112,7 +175,7 @@ dbdump dump -h localhost -u root -d mydb -o backup.sql
 
 ```bash
 # Use environment variable for password
-export MYSQL_PWD=secret
+export DBDUMP_MYSQL_PWD=secret
 dbdump dump -h prod.example.com -u readonly -d myapp_prod
 
 # Exclude specific tables
@@ -209,13 +272,13 @@ These defaults are always applied and can be extended with project configs or CL
 dbdump uses a two-phase approach:
 
 1. **Phase 1: Structure Dump**
-   - Dumps complete schema for ALL tables
-   - Ensures foreign keys and relationships are preserved
-   - Uses `mysqldump --no-data`
+    - Dumps complete schema for ALL tables
+    - Ensures foreign keys and relationships are preserved
+    - Uses `mysqldump --no-data`
 
 2. **Phase 2: Data Dump**
-   - Dumps data for all tables EXCEPT excluded ones
-   - Uses `mysqldump --no-create-info --ignore-table=...`
+    - Dumps data for all tables EXCEPT excluded ones
+    - Uses `mysqldump --no-create-info --ignore-table=...`
 
 Result: A complete database dump with empty noisy tables.
 
@@ -238,12 +301,24 @@ Result: A complete database dump with empty noisy tables.
 
 **Time saved: 4-5 hours per database refresh**
 
+> **Note:** Performance improvements vary based on database structure, server resources, and excluded table sizes.
+> Typical improvements range from 5-20% faster than equivalent mysqldump commands.
+
 ## Documentation
 
-- **[USER-GUIDE.md](USER-GUIDE.md)** - Comprehensive user guide with detailed configuration, examples, and troubleshooting
+### User Documentation
+
+- **[USER-GUIDE.md](USER-GUIDE.md)** - Comprehensive user guide with detailed configuration, examples, and
+  troubleshooting
+- **[SECURITY.md](SECURITY.md)** - Security best practices and credential handling
+- **[CHANGELOG.md](CHANGELOG.md)** - Version history
+
+### Developer Documentation
+
+- **[TESTING_GUIDE.md](TESTING_GUIDE.md)** - Complete testing documentation
 - **[BENCHMARKING.md](BENCHMARKING.md)** - Performance testing guide
 - **[VERIFIED_PERFORMANCE.md](VERIFIED_PERFORMANCE.md)** - Real-world benchmark results
-- **[CHANGELOG.md](CHANGELOG.md)** - Version history
+- **[.github/CICD.md](.github/CICD.md)** - CI/CD workflows and release process
 
 ## Development
 
@@ -261,6 +336,42 @@ make test
 
 # Format code
 make fmt
+```
+
+### Testing
+
+#### Integration Tests
+
+```bash
+# Start test databases (MySQL 5.7, 8.0, 8.4, MariaDB)
+docker-compose up -d
+
+# Generate sample data
+./test/generate-sample-data.sh medium 127.0.0.1 3308 testdb
+
+# Run full integration test suite
+./test/integration-test.sh
+
+# Cleanup
+docker-compose down -v
+```
+
+See [test/README.md](test/README.md) for detailed testing documentation.
+
+#### Manual Testing
+
+```bash
+# Test security (password not in process list)
+export DBDUMP_MYSQL_PWD=testpass123
+./bin/dbdump dump -H 127.0.0.1 -P 3308 -u root -d testdb --auto
+ps aux | grep dbdump  # Should NOT show password
+
+# Verify file permissions (should be 0600)
+ls -la testdb_*.sql
+
+# Test data integrity (triggers, procedures)
+grep -i "CREATE TRIGGER" testdb_*.sql
+grep -i "CREATE PROCEDURE" testdb_*.sql
 ```
 
 ### Project Structure
@@ -294,3 +405,12 @@ MIT License - see LICENSE file for details
 - Built with [Cobra](https://github.com/spf13/cobra) for CLI
 - Interactive UI using [Bubble Tea](https://github.com/charmbracelet/bubbletea)
 - Progress bars by [progressbar](https://github.com/schollz/progressbar)
+
+### Branding
+
+- Font: [Monda](https://fonts.google.com/specimen/Monda)
+- Icon: [Remix - Stock Line](https://remixicon.com/icon/stock-line)
+- Colors:
+    - Dark: `#0F172A`
+    - Icon: `#F9FAFB`
+    - Text: `#FFFFFF`

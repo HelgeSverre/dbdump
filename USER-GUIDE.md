@@ -99,9 +99,14 @@ dbdump dump -u root -p yourpassword -d mydatabase --auto
 dbdump dump -u root -p yourpassword -d mydatabase -o backup.sql
 ```
 
-For security, you can also use the `MYSQL_PWD` environment variable:
+For security, you should use environment variables for passwords:
 
 ```bash
+# Recommended: Use dbdump-specific variable
+export DBDUMP_MYSQL_PWD=yourpassword
+dbdump dump -u root -d mydatabase
+
+# Alternative: Standard MySQL variable (fallback)
 export MYSQL_PWD=yourpassword
 dbdump dump -u root -d mydatabase
 ```
@@ -247,7 +252,7 @@ dbdump dump [flags]
 | `--host` | `-H` | Database host | 127.0.0.1 | No |
 | `--port` | `-P` | Database port | 3306 | No |
 | `--user` | `-u` | Database user | - | Yes |
-| `--password` | `-p` | Database password | $MYSQL_PWD | No |
+| `--password` | `-p` | Database password | $DBDUMP_MYSQL_PWD or $MYSQL_PWD | No |
 | `--database` | `-d` | Database name | - | Yes |
 
 **Dump Flags:**
@@ -651,8 +656,8 @@ dbdump optimizes what's dumped, but can't make `mysqldump` itself faster. To imp
 
 dbdump doesn't modify or send data anywhere—it's just a wrapper around `mysqldump`. However:
 - Dump files contain database contents (encrypt if needed)
-- Be careful with connection profiles (passwords stored in plain text)
-- Use environment variables for passwords instead of CLI flags
+- Always use environment variables (`DBDUMP_MYSQL_PWD`) for passwords instead of CLI flags
+- Dump files are created with restrictive permissions (0600) for security
 
 ### How do I contribute or report bugs?
 
