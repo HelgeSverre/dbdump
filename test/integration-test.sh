@@ -107,7 +107,9 @@ test_security_features() {
     run_test "Dump file permissions 0600" "
         export DBDUMP_MYSQL_PWD=testpass123
         ./bin/dbdump dump -H 127.0.0.1 -P $port -u root -d testdb --auto -o /tmp/test_perms.sql
-        [ \"\$(stat -f '%A' /tmp/test_perms.sql 2>/dev/null || stat -c '%a' /tmp/test_perms.sql)\" = \"600\" ]
+        # Use ls -l to check permissions (more portable than stat)
+        perms=\$(ls -l /tmp/test_perms.sql | cut -c1-10)
+        [ \"\$perms\" = \"-rw-------\" ]
     "
     
     # Test 3: Special characters in password
