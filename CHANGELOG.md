@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **[CI/CD]** Fixed CI test failures with Docker Compose and error handling
+  - Updated `docker-compose` to `docker compose` for newer Docker CLI
+  - Fixed 7 errcheck violations (unchecked error returns for Close/Flush)
+  - Made integration tests CI-aware to avoid port conflicts
+  - Fixed portable file permission checks using `ls -l` instead of platform-specific `stat`
+
 ## [1.0.0] - 2024-10-28
 
 ### Security Fixes (CRITICAL)
@@ -110,10 +117,10 @@ See `VERIFIED_PERFORMANCE.md` for detailed benchmark analysis and environmental 
 - Added `OPTIMIZATION_RESULTS.md` - Detailed performance test results
 - Added `BENCHMARKING.md` - Comprehensive benchmarking guide
 
-## [1.0.0] - 2025-10-21
+## [0.9.0] - 2024-10-21
 
 ### Added
-- Initial release of dbdump
+- Initial public release of dbdump
 - Two-phase dumping strategy (structure + selective data)
 - Smart defaults for Laravel applications
   - Pre-configured patterns for audits, telescope, pulse, sessions, cache

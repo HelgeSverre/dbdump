@@ -260,7 +260,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
         with:
-          go-version: '1.21'
+          go-version: '1.23'
       - name: Security Tests
         run: make verify-security
 
@@ -270,7 +270,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
         with:
-          go-version: '1.21'
+          go-version: '1.23'
       - name: Integration Tests
         run: make test-integration-clean
 ```
@@ -288,20 +288,20 @@ docker ps
 # If not, start Docker Desktop / OrbStack / etc.
 
 # Verify Docker Compose is available
-docker-compose --version
+docker compose version
 ```
 
 ### Database Connection Refused
 
 ```bash
 # Check if containers are running
-docker-compose ps
+docker compose ps
 
 # Check if ports are accessible
 nc -zv 127.0.0.1 3308
 
 # View container logs
-docker-compose logs mysql80
+docker compose logs mysql80
 
 # Restart containers
 make test-docker-clean
@@ -464,5 +464,5 @@ The generated test data includes:
 
 ---
 
-**Last Updated:** 2025-10-28  
+**Last Updated:** 2024-10-28
 **Maintainer:** Helge Sverre

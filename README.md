@@ -91,7 +91,7 @@ cd dbdump
 make install
 ```
 
-Requires Go 1.21+.
+Requires Go 1.23+.
 
 ## Quick Start
 
@@ -317,8 +317,6 @@ Result: A complete database dump with empty noisy tables.
 
 - **[TESTING_GUIDE.md](TESTING_GUIDE.md)** - Complete testing documentation
 - **[BENCHMARKING.md](BENCHMARKING.md)** - Performance testing guide
-- **[VERIFIED_PERFORMANCE.md](VERIFIED_PERFORMANCE.md)** - Real-world benchmark results
-- **[.github/CICD.md](.github/CICD.md)** - CI/CD workflows and release process
 
 ## Development
 
@@ -344,7 +342,7 @@ make fmt
 
 ```bash
 # Start test databases (MySQL 5.7, 8.0, 8.4, MariaDB)
-docker-compose up -d
+docker compose up -d
 
 # Generate sample data
 ./test/generate-sample-data.sh medium 127.0.0.1 3308 testdb
@@ -353,7 +351,7 @@ docker-compose up -d
 ./test/integration-test.sh
 
 # Cleanup
-docker-compose down -v
+docker compose down -v
 ```
 
 See [test/README.md](test/README.md) for detailed testing documentation.

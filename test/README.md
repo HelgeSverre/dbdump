@@ -6,7 +6,7 @@ This directory contains testing tools and scripts for dbdump.
 
 ```bash
 # Start test databases
-docker-compose up -d
+docker compose up -d
 
 # Generate sample data (medium size)
 ./test/generate-sample-data.sh medium 127.0.0.1 3308 testdb
@@ -15,7 +15,7 @@ docker-compose up -d
 ./test/integration-test.sh
 
 # Stop test databases
-docker-compose down
+docker compose down
 ```
 
 ---
@@ -42,19 +42,19 @@ The `docker-compose.yml` provides isolated test databases:
 
 ```bash
 # Start all databases
-docker-compose up -d
+docker compose up -d
 
 # Start specific database
-docker-compose up -d mysql80
+docker compose up -d mysql80
 
 # View logs
-docker-compose logs -f mysql80
+docker compose logs -f mysql80
 
 # Stop all
-docker-compose down
+docker compose down
 
 # Stop and remove volumes (clean slate)
-docker-compose down -v
+docker compose down -v
 ```
 
 ---
@@ -299,14 +299,14 @@ make bench DB=testdb ITER=5
 
 ```bash
 # Check logs
-docker-compose logs mysql80
+docker compose logs mysql80
 
 # Restart specific container
-docker-compose restart mysql80
+docker compose restart mysql80
 
 # Clean start
-docker-compose down -v
-docker-compose up -d
+docker compose down -v
+docker compose up -d
 ```
 
 ### Connection Refused
@@ -352,10 +352,10 @@ bash -x ./test/integration-test.sh
 
 ```bash
 # Stop containers
-docker-compose down
+docker compose down
 
 # Remove volumes (deletes all data)
-docker-compose down -v
+docker compose down -v
 
 # Remove test dump files
 rm -f *.sql test_*.sql /tmp/test_*.sql
@@ -382,26 +382,26 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.21'
+          go-version: '1.23'
       
       - name: Build
         run: make build
       
       - name: Start test databases
-        run: docker-compose up -d
-      
+        run: docker compose up -d
+
       - name: Wait for databases
         run: sleep 30
-      
+
       - name: Generate test data
         run: ./test/generate-sample-data.sh small 127.0.0.1 3308 testdb
-      
+
       - name: Run integration tests
         run: ./test/integration-test.sh
-      
+
       - name: Cleanup
         if: always()
-        run: docker-compose down -v
+        run: docker compose down -v
 ```
 
 ---

@@ -25,6 +25,11 @@ dbdump supports multiple methods for providing database credentials. Use the mos
 #### 1. Environment Variable (Recommended)
 
 ```bash
+# Preferred: dbdump-specific variable
+export DBDUMP_MYSQL_PWD=yourpassword
+dbdump dump -u root -d mydb
+
+# Alternative: standard MySQL variable (fallback)
 export MYSQL_PWD=yourpassword
 dbdump dump -u root -d mydb
 ```
@@ -32,7 +37,8 @@ dbdump dump -u root -d mydb
 **Pros:**
 - Not visible in process lists
 - Can be set in secure deployment systems
-- Compatible with MySQL standard
+- `DBDUMP_MYSQL_PWD` avoids polluting standard MySQL environment
+- Falls back to `MYSQL_PWD` for compatibility
 
 **Cons:**
 - Still in environment, accessible to same-user processes
@@ -194,14 +200,15 @@ If dumping databases with payment card information:
 
 ## Version History
 
-### v1.1.0 (Current)
-- **[SECURITY]** Fixed password exposure in process lists (now uses MYSQL_PWD)
+### v1.0.0 (Current - 2024-10-28)
+- **[SECURITY]** Fixed password exposure in process lists (now uses MYSQL_PWD env var)
 - **[SECURITY]** Dump files created with 0600 permissions
 - **[SECURITY]** Safe DSN construction with proper escaping
 - **[SECURITY]** Connection timeouts prevent hanging
+- **[SECURITY]** Added DBDUMP_MYSQL_PWD as preferred environment variable
 
-### v1.0.0
-- Initial release with basic security measures
+### v0.9.0 (2024-10-21)
+- Initial public release with basic security measures
 
 ---
 
@@ -215,4 +222,4 @@ Security improvements based on:
 
 ---
 
-**Last Updated:** 2025-10-28
+**Last Updated:** 2024-10-28
