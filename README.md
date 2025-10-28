@@ -10,7 +10,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/helgesverre/dbdump)](https://goreportcard.com/report/github.com/helgesverre/dbdump)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A fast, intelligent MySQL database dumping tool that excludes noisy table data while preserving structure.
+Fast MySQL dump tool that excludes noisy data while preserving complete database structure.
 
 ## Why dbdump?
 
