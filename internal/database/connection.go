@@ -46,7 +46,7 @@ func (c *Connection) Connect() (*sql.DB, error) {
 
 	// Verify the connection
 	if err := db.Ping(); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
@@ -59,6 +59,8 @@ func (c *Connection) TestConnection() error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer func() {
+		_ = db.Close()
+	}()
 	return nil
 }

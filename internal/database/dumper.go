@@ -53,11 +53,19 @@ func (d *Dumper) Dump() (*DumpResult, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create output file: %w", err)
 	}
-	defer outFile.Close()
+	defer func() {
+		if err := outFile.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to close output file: %v\n", err)
+		}
+	}()
 
 	// Use 256KB buffer for optimal write performance
 	writer := bufio.NewWriterSize(outFile, 256*1024)
-	defer writer.Flush()
+	defer func() {
+		if err := writer.Flush(); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to flush writer: %v\n", err)
+		}
+	}()
 
 	// Phase 1: Dump structure for all tables
 	if err := d.dumpStructure(writer); err != nil {

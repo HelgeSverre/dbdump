@@ -32,7 +32,9 @@ func (i *Inspector) ListTables() ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to list tables: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 
 	var tables []string
 	for rows.Next() {
@@ -100,7 +102,9 @@ func (i *Inspector) GetAllTablesInfo() ([]TableInfo, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get tables info: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 
 	var tables []TableInfo
 	for rows.Next() {

@@ -135,7 +135,11 @@ func runDump(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to close database connection: %v\n", err)
+		}
+	}()
 
 	ui.PrintSuccess("Connected to database")
 
@@ -253,7 +257,11 @@ func runList(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to close database connection: %v\n", err)
+		}
+	}()
 
 	// Get table information
 	inspector := database.NewInspector(db)

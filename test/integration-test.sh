@@ -226,7 +226,7 @@ make build || { log_error "Build failed"; exit 1; }
 
 # Start Docker Compose
 log_info "Starting Docker Compose..."
-docker-compose up -d
+docker compose up -d
 
 echo ""
 
@@ -286,13 +286,13 @@ echo ""
 if [ $TESTS_FAILED -eq 0 ]; then
     log_info "All tests passed! ✓"
     echo ""
-    echo "To stop Docker containers: docker-compose down"
-    echo "To cleanup volumes: docker-compose down -v"
+    echo "To stop Docker containers: docker compose down"
+    echo "To cleanup volumes: docker compose down -v"
     exit 0
 else
     log_error "Some tests failed!"
     echo ""
-    echo "To view logs: docker-compose logs [mysql57|mysql80|mysql84|mariadb]"
-    echo "To stop: docker-compose down"
+    echo "To view logs: docker compose logs [mysql57|mysql80|mysql84|mariadb]"
+    echo "To stop: docker compose down"
     exit 1
 fi
