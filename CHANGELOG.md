@@ -7,12 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2024-10-28
+
 ### Fixed
 - **[CI/CD]** Fixed CI test failures with Docker Compose and error handling
   - Updated `docker-compose` to `docker compose` for newer Docker CLI
   - Fixed 7 errcheck violations (unchecked error returns for Close/Flush)
   - Made integration tests CI-aware to avoid port conflicts
   - Fixed portable file permission checks using `ls -l` instead of platform-specific `stat`
+
+### Documentation
+- Updated all documentation for accuracy and consistency
+- Fixed Go version requirement from 1.21+ to 1.23+
+- Corrected date inconsistencies throughout documentation
+- Emphasized DBDUMP_MYSQL_PWD as preferred environment variable
 
 ## [1.0.0] - 2024-10-28
 
