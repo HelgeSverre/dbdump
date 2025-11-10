@@ -121,7 +121,7 @@ jobs:
           fi
       
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: release-binaries
           path: ./release-files
@@ -195,7 +195,7 @@ jobs:
           fi
       
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: release-binaries
           path: ./release-files
