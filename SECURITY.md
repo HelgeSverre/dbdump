@@ -4,7 +4,7 @@
 
 If you discover a security vulnerability in dbdump, please report it by emailing the maintainer directly rather than opening a public issue.
 
-**Contact:** [helge.sverre@gmail.com](mailto:helge.sverre@gmail.com)
+**Contact:** [helge.sverre+dbdump-security@gmail.com](mailto:helge.sverre+dbdump-security@gmail.com)
 
 Please include:
 - Description of the vulnerability
