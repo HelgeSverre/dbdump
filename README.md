@@ -9,6 +9,7 @@
 [![Release](https://github.com/helgesverre/dbdump/actions/workflows/release.yml/badge.svg)](https://github.com/helgesverre/dbdump/actions/workflows/release.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/helgesverre/dbdump)](https://goreportcard.com/report/github.com/helgesverre/dbdump)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![dbdump](https://img.shields.io/badge/dbdump-0F172A?style=flat&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyNCAyNCcgZmlsbD0nd2hpdGUnPjxwYXRoIGQ9J004LjAwNDg4IDUuMDAyODFIMTEuMDA0OVYxNC4wMDI4SDguMDA0ODhWMTcuMDAyOEg2LjAwNDg4VjE0LjAwMjhIMy4wMDQ4OFY1LjAwMjgxSDYuMDA0ODhWMi4wMDI4MUg4LjAwNDg4VjUuMDAyODFaTTUuMDA0ODggNy4wMDI4MVYxMi4wMDI4SDkuMDA0ODhWNy4wMDI4MUg1LjAwNDg4Wk0xOC4wMDQ5IDEwLjAwMjhIMjEuMDA0OVYxOS4wMDI4SDE4LjAwNDlWMjIuMDAyOEgxNi4wMDQ5VjE5LjAwMjhIMTMuMDA0OVYxMC4wMDI4SDE2LjAwNDlWNy4wMDI4MUgxOC4wMDQ5VjEwLjAwMjhaTTE1LjAwNDkgMTIuMDAyOFYxNy4wMDI4SDE5LjAwNDlWMTIuMDAyOEgxNS4wMDQ5Wic+PC9wYXRoPjwvc3ZnPgo=)](https://dbdump-five.vercel.app/)
 
 Fast MySQL dump tool that excludes noisy data while preserving complete database structure.
 
