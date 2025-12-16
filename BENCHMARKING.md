@@ -12,9 +12,9 @@ make bench
 make bench-quick
 
 # Benchmark specific database with custom iterations
-make bench DB=kassalapp ITER=5
+make bench DB=mydb ITER=5
 
-# Run benchmarks on all test databases
+# Run benchmarks on configured test databases (crescat_dump, crescat_dump_2, crescat_dump_3)
 make bench-all
 ```
 
@@ -213,7 +213,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.23
+          go-version: '1.23'
 
       - name: Load test database
         run: |
@@ -302,9 +302,9 @@ Track performance improvements over time:
 
 | Date | Version | Optimization | Baseline | After | Improvement |
 |------|---------|--------------|----------|-------|-------------|
-| 2025-10-21 | v1.0.0 | Initial release | - | 115 MB/s | - |
-| 2025-10-21 | v1.1.0 | Buffer size 256KB | 115 MB/s | 125 MB/s | +8.7% |
-| 2025-10-21 | v1.1.0 | mysqldump flags | 125 MB/s | 135 MB/s | +8.0% |
+| 2024-10-21 | v1.0.0 | Initial release | - | 115 MB/s | - |
+| 2024-10-21 | v1.0.0 | Buffer size 256KB | 115 MB/s | 125 MB/s | +8.7% |
+| 2024-10-21 | v1.0.0 | mysqldump flags | 125 MB/s | 135 MB/s | +8.0% |
 | - | - | **Total improvement** | 115 MB/s | 135 MB/s | **+17.4%** |
 
 ## Troubleshooting
@@ -373,7 +373,7 @@ make bench DB=crescat_dump ITER=5
 
 # 5. Test on other databases to verify
 make bench DB=crescat_dump_2 ITER=3
-make bench DB=kassalapp ITER=3
+make bench DB=crescat_dump_3 ITER=3
 
 # 6. Document in OPTIMIZATION_HISTORY.md
 ```

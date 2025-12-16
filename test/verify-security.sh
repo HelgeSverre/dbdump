@@ -108,7 +108,7 @@ rm -f /tmp/test_security_dump2.sql
 log_test "Test 3: Password hidden in mysqldump subprocess"
 
 # This test requires a real database, so we'll use Docker if available
-if command -v docker &>/dev/null && docker-compose ps | grep -q "mysql80.*Up"; then
+if command -v docker &>/dev/null && docker compose ps 2>/dev/null | grep -q "mysql80.*Up\|mysql80.*running"; then
     log_info "MySQL 8.0 container is running, testing with real connection..."
     
     export DBDUMP_MYSQL_PWD="testpass123"
@@ -143,7 +143,7 @@ if command -v docker &>/dev/null && docker-compose ps | grep -q "mysql80.*Up"; t
     rm -f /tmp/test_security_dump3.sql
 else
     log_info "Docker not running, skipping mysqldump subprocess test"
-    log_info "Run 'docker-compose up -d' to enable this test"
+    log_info "Run 'docker compose up -d' to enable this test"
 fi
 
 ##
@@ -151,7 +151,7 @@ fi
 ##
 log_test "Test 4: Dump files created with restrictive permissions"
 
-if command -v docker &>/dev/null && docker-compose ps | grep -q "mysql80.*Up"; then
+if command -v docker &>/dev/null && docker compose ps 2>/dev/null | grep -q "mysql80.*Up\|mysql80.*running"; then
     export DBDUMP_MYSQL_PWD="testpass123"
     
     "$PROJECT_ROOT/bin/dbdump" dump -H 127.0.0.1 -P 3308 -u root -d testdb --auto -o /tmp/test_security_perms.sql &>/dev/null

@@ -355,22 +355,23 @@ Our code handles these via conditional flags.
 5. ✓ Code doesn't use `-p<password>` pattern
 6. ✓ Code sets MYSQL_PWD environment variable
 
-### Integration Tests (13 tests × 4 databases = 52 tests)
+### Integration Tests (12 tests × 4 databases = 48 tests)
 
 **Per Database:**
 1. ✓ Password not in process list
 2. ✓ Dump file permissions 0600
 3. ✓ Special characters in password work
 4. ✓ Triggers in structure dump
-5. ✓ Stored procedures in dump
-6. ✓ No duplicate triggers
-7. ✓ Dump can be restored
-8. ✓ Audits table structure preserved
-9. ✓ Audits data excluded
-10. ✓ Users data included
-11. ✓ List command works
-12. ✓ Dry run mode works
-13. ✓ Custom output file works
+5. ✓ No duplicate triggers
+6. ✓ Dump can be restored
+7. ✓ Audits table structure preserved
+8. ✓ Audits data excluded
+9. ✓ Users data included
+10. ✓ List command works
+11. ✓ Dry run mode works
+12. ✓ Custom output file works
+
+> **Note:** Stored procedures test is currently disabled due to MySQL 5.7 compatibility issues with newer mysqldump clients.
 
 **Databases Tested:**
 - MySQL 5.7 (port 3307)
@@ -459,10 +460,8 @@ The generated test data includes:
 
 - [test/README.md](test/README.md) - Detailed testing documentation
 - [SECURITY.md](SECURITY.md) - Security best practices
-- [SECURITY_AND_CODE_REVIEW.md](SECURITY_AND_CODE_REVIEW.md) - Security audit details
-- [PRE_RELEASE_CHECKLIST.md](PRE_RELEASE_CHECKLIST.md) - Release preparation
 
 ---
 
-**Last Updated:** 2024-10-28
+**Last Updated:** 2025-12-16
 **Maintainer:** Helge Sverre

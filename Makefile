@@ -113,18 +113,18 @@ example-dry-run: build ## Example: dry run
 
 test-docker-up: ## Start Docker Compose test databases
 	@echo "Starting test databases..."
-	docker-compose up -d
+	docker compose up -d
 	@echo "Waiting for databases to be ready (30s)..."
 	@sleep 30
 	@echo "Databases ready!"
 
 test-docker-down: ## Stop Docker Compose test databases
 	@echo "Stopping test databases..."
-	docker-compose down
+	docker compose down
 
 test-docker-clean: ## Stop Docker and remove all data volumes
 	@echo "Stopping and cleaning test databases..."
-	docker-compose down -v
+	docker compose down -v
 	@echo "All test data removed!"
 
 test-data-small: ## Generate small test dataset (~10MB) on MySQL 8.0

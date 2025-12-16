@@ -472,7 +472,7 @@ When you run `dbdump dump` without the `--auto` flag, you'll enter interactive m
 | `↑/↓` or `j/k` | Move cursor up/down |
 | `Space` | Toggle selection |
 | `Enter` | Confirm and proceed with dump |
-| `Ctrl+C` | Cancel and exit |
+| `q` or `Ctrl+C` | Cancel and exit |
 
 ### Tips
 

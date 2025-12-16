@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.0.1] - 2024-10-28
+## [1.0.1] - 2025-10-28
 
 ### Fixed
 - **[CI/CD]** Fixed CI test failures with Docker Compose and error handling
@@ -22,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Corrected date inconsistencies throughout documentation
 - Emphasized DBDUMP_MYSQL_PWD as preferred environment variable
 
-## [1.0.0] - 2024-10-28
+## [1.0.0] - 2025-10-28
 
 ### Security Fixes (CRITICAL)
 
@@ -84,9 +84,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exclusion logic verification
 - **Comprehensive documentation**
   - `SECURITY.md` - Security best practices and credential handling
-  - `SECURITY_AND_CODE_REVIEW.md` - Detailed security audit findings
-  - `PRE_RELEASE_CHECKLIST.md` - Release preparation tasks
-  - `VERIFICATION_SUMMARY.md` - Code review summary
 - Comprehensive benchmark suite (`scripts/benchmark.sh`)
   - Automated performance testing with statistical analysis
   - JSON output for programmatic analysis
@@ -119,13 +116,12 @@ Performance improvements vary based on database structure, server resources, and
 - **Throughput:** 100-135 MB/s depending on system and database characteristics
 - **Memory:** Constant 30-50 MB usage (streaming architecture)
 
-See `VERIFIED_PERFORMANCE.md` for detailed benchmark analysis and environmental factors.
+See `BENCHMARKING.md` for detailed benchmark analysis and environmental factors.
 
 ### Documentation
-- Added `OPTIMIZATION_RESULTS.md` - Detailed performance test results
 - Added `BENCHMARKING.md` - Comprehensive benchmarking guide
 
-## [0.9.0] - 2024-10-21
+## [0.9.0] - 2025-10-21
 
 ### Added
 - Initial public release of dbdump
@@ -178,18 +174,16 @@ See `VERIFIED_PERFORMANCE.md` for detailed benchmark analysis and environmental 
 
 ## Upgrade Notes
 
-### v1.0.0 → v1.1.0 (Unreleased)
+### v0.9.0 → v1.0.0
 
-**No breaking changes.** Performance optimizations are transparent to users.
+**Security improvements:** v1.0.0 includes critical security fixes. All users should upgrade.
 
-**New features:**
-- Benchmark suite for performance testing
-- Enhanced Makefile with benchmark targets
+**No breaking changes to CLI or configuration.**
 
 **Recommendations:**
-- Update to benefit from 15-20% faster dumps
+- Use `DBDUMP_MYSQL_PWD` environment variable instead of command-line `-p` flag
+- Review `SECURITY.md` for credential handling best practices
 - Use `make bench` to validate performance in your environment
-- Review `BENCHMARKING.md` for best practices
 
 ## Migration Guides
 
@@ -232,7 +226,7 @@ dbdump is faster and more scriptable:
 - Binary format support
 - Import helper functionality
 
-See `ROADMAP.md` (coming soon) for detailed plans.
+<!-- Roadmap details to be added in future releases -->
 
 ## Support
 
@@ -248,3 +242,12 @@ See `ROADMAP.md` (coming soon) for detailed plans.
 ## License
 
 MIT License - see [LICENSE](LICENSE) file for details.
+
+---
+
+<!-- Version comparison links -->
+[Unreleased]: https://github.com/helgesverre/dbdump/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/helgesverre/dbdump/compare/v1.0.0...v1.0.1
+[1.0.0]: https://github.com/helgesverre/dbdump/compare/v0.9.0...v1.0.0
+[0.9.0]: https://github.com/helgesverre/dbdump/compare/v0.1.0...v0.9.0
+[0.1.0]: https://github.com/helgesverre/dbdump/releases/tag/v0.1.0

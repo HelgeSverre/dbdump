@@ -151,7 +151,7 @@ FLUSH PRIVILEGES;
 
 ### Implemented
 
-- ✅ **Secure password passing** via `MYSQL_PWD` environment variable (not command-line args)
+- ✅ **Secure password passing** via `DBDUMP_MYSQL_PWD` or `MYSQL_PWD` environment variable (not command-line args)
 - ✅ **Restrictive file permissions** (0600) for dump files
 - ✅ **Safe DSN construction** using mysql.Config with proper escaping
 - ✅ **Connection timeouts** to prevent hanging on unreachable databases

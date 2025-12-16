@@ -79,7 +79,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&host, "host", "H", "127.0.0.1", "Database host")
 	rootCmd.PersistentFlags().IntVarP(&port, "port", "P", 3306, "Database port")
 	rootCmd.PersistentFlags().StringVarP(&user, "user", "u", "", "Database user")
-	rootCmd.PersistentFlags().StringVarP(&password, "password", "p", "", "Database password (or use MYSQL_PWD env)")
+	rootCmd.PersistentFlags().StringVarP(&password, "password", "p", "", "Database password (or use DBDUMP_MYSQL_PWD/MYSQL_PWD env)")
 	rootCmd.PersistentFlags().StringVarP(&dbName, "database", "d", "", "Database name")
 
 	// Dump command flags
