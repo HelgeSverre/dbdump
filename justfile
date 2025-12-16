@@ -246,3 +246,10 @@ quick: fmt vet test
 [doc('Full quality suite before PR')]
 pr: check test-integration-quick
     @echo "Ready for PR!"
+
+# === Website ===
+
+[group('website')]
+[doc('Deploy website to production')]
+deploy-website:
+    cd website && vc --prod
