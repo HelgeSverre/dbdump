@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2025-12-16
+
+### Added
+- **[Website]** New minimal, beginner-friendly documentation website
+  - Clean single-page design with sticky navigation
+  - Copy-to-clipboard buttons on all code blocks
+  - Platform selector tabs for installation instructions
+  - Full user guide with collapsible FAQ/troubleshooting sections
+  - Responsive design with dark mode support
+  - Monda font and Remix stock-line icon branding
+- **[Install]** Added `go install` command as installation option
+  - `go install github.com/helgesverre/dbdump/cmd/dbdump@latest`
+
+### Changed
+- **[Build]** Replaced Makefile with justfile as the sole build system
+  - All `make` commands are now `just` commands
+  - Updated all documentation to reference `just`
+  - GitHub Actions workflows use direct commands (no build tool dependency)
+- **[Build]** Updated to `docker compose` (removed hyphenated `docker-compose`)
+- **[CI]** Upgraded to Go 1.24 for bubbletea v1.3.10 compatibility
+
+### Fixed
+- **[Benchmark]** Fixed benchmark script locale issues
+  - Added `LC_ALL=C` to ensure consistent decimal separators
+  - Fixed time output capture in benchmark script
+- **[Benchmark]** Replaced internal database name with `example_db` in benchmarks
+
+### Dependencies
+- Bumped actions/upload-artifact from 5 to 6
+- Bumped actions/download-artifact from 6 to 7
+- Bumped github.com/spf13/cobra from 1.10.1 to 1.10.2
+
 ## [1.0.1] - 2025-10-28
 
 ### Fixed
