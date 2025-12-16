@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbdump - Fast MySQL Dump Tool</title>
+    <meta name="description" content="Fast MySQL dump tool that excludes noisy data while preserving complete database structure. Reduce dump time from hours to minutes.">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav>
+        <div class="nav-content">
+            <a href="#" class="logo">dbdump</a>
+            <div class="nav-links">
+                <a href="#install">Install</a>
+                <a href="#guide">Guide</a>
+                <a href="https://github.com/helgesverre/dbdump" target="_blank">GitHub</a>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        <!-- Hero -->
+        <section class="hero">
+            <h1>dbdump</h1>
+            <p class="subtitle">Fast MySQL dumps without the noise</p>
+            <p class="description">
+                Reduce database dump time from hours to minutes by automatically
+                excluding audit logs, sessions, and cache tables while keeping
+                your schema intact.
+            </p>
+            <div class="hero-actions">
+                <a href="#install" class="btn btn-primary">Get Started</a>
+                <a href="https://github.com/helgesverre/dbdump" class="btn btn-secondary" target="_blank">View on GitHub</a>
+            </div>
+        </section>
+
+        <!-- Why -->
+        <section class="why">
+            <h2>Why dbdump?</h2>
+            <p class="lead">
+                Production databases contain millions of rows you don't need for development:
+                audit logs, session data, telescope entries, cache records. These make dumps
+                take hours and consume gigabytes of space.
+            </p>
+            <div class="benefits">
+                <div class="benefit">
+                    <div class="benefit-icon">~</div>
+                    <h3>Faster Dumps</h3>
+                    <p>3-4 hours down to 15-20 minutes</p>
+                </div>
+                <div class="benefit">
+                    <div class="benefit-icon">&lt;</div>
+                    <h3>Smaller Files</h3>
+                    <p>15GB down to 3GB</p>
+                </div>
+                <div class="benefit">
+                    <div class="benefit-icon">*</div>
+                    <h3>No Broken Keys</h3>
+                    <p>All table structures preserved</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Quick Start -->
+        <section class="quickstart">
+            <h2>Quick Start</h2>
+            <p class="lead">Get a database dump in two commands.</p>
+
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>Set your password</h3>
+                        <p>Use an environment variable for security:</p>
+                        <div class="code-block">
+                            <pre><code>export DBDUMP_MYSQL_PWD=yourpassword</code></pre>
+                            <button class="copy-btn" data-copy="export DBDUMP_MYSQL_PWD=yourpassword">Copy</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3>Run the dump</h3>
+                        <p>Use <code>--auto</code> for smart defaults, or omit it for interactive mode:</p>
+                        <div class="code-block">
+                            <pre><code>dbdump dump -h localhost -u root -d mydb --auto</code></pre>
+                            <button class="copy-btn" data-copy="dbdump dump -h localhost -u root -d mydb --auto">Copy</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <p class="note">That's it! Your dump file will be created with noisy tables excluded automatically.</p>
+        </section>
+
+        <!-- Install -->
+        <section id="install" class="install">
+            <h2>Installation</h2>
+            <p class="lead">Download the binary for your platform and add it to your PATH.</p>
+
+            <div class="platform-selector">
+                <button class="platform-btn active" data-platform="mac-arm">macOS (Apple Silicon)</button>
+                <button class="platform-btn" data-platform="mac-intel">macOS (Intel)</button>
+                <button class="platform-btn" data-platform="linux-amd">Linux (AMD64)</button>
+                <button class="platform-btn" data-platform="linux-arm">Linux (ARM64)</button>
+            </div>
+
+            <div class="platform-content">
+                <div id="mac-arm" class="platform-instructions active">
+                    <div class="code-block">
+                        <pre><code>curl -LO https://github.com/helgesverre/dbdump/releases/latest/download/dbdump-darwin-arm64.tar.gz
+tar -xzf dbdump-darwin-arm64.tar.gz
+chmod +x dbdump-darwin-arm64
+sudo mv dbdump-darwin-arm64 /usr/local/bin/dbdump</code></pre>
+                        <button class="copy-btn" data-copy="curl -LO https://github.com/helgesverre/dbdump/releases/latest/download/dbdump-darwin-arm64.tar.gz
+tar -xzf dbdump-darwin-arm64.tar.gz
+chmod +x dbdump-darwin-arm64
+sudo mv dbdump-darwin-arm64 /usr/local/bin/dbdump">Copy</button>
+                    </div>
+                </div>
+                <div id="mac-intel" class="platform-instructions">
+                    <div class="code-block">
+                        <pre><code>curl -LO https://github.com/helgesverre/dbdump/releases/latest/download/dbdump-darwin-amd64.tar.gz
+tar -xzf dbdump-darwin-amd64.tar.gz
+chmod +x dbdump-darwin-amd64
+sudo mv dbdump-darwin-amd64 /usr/local/bin/dbdump</code></pre>
+                        <button class="copy-btn" data-copy="curl -LO https://github.com/helgesverre/dbdump/releases/latest/download/dbdump-darwin-amd64.tar.gz
+tar -xzf dbdump-darwin-amd64.tar.gz
+chmod +x dbdump-darwin-amd64
+sudo mv dbdump-darwin-amd64 /usr/local/bin/dbdump">Copy</button>
+                    </div>
+                </div>
+                <div id="linux-amd" class="platform-instructions">
+                    <div class="code-block">
+                        <pre><code>curl -LO https://github.com/helgesverre/dbdump/releases/latest/download/dbdump-linux-amd64.tar.gz
+tar -xzf dbdump-linux-amd64.tar.gz
+chmod +x dbdump-linux-amd64
+sudo mv dbdump-linux-amd64 /usr/local/bin/dbdump</code></pre>
+                        <button class="copy-btn" data-copy="curl -LO https://github.com/helgesverre/dbdump/releases/latest/download/dbdump-linux-amd64.tar.gz
+tar -xzf dbdump-linux-amd64.tar.gz
+chmod +x dbdump-linux-amd64
+sudo mv dbdump-linux-amd64 /usr/local/bin/dbdump">Copy</button>
+                    </div>
+                </div>
+                <div id="linux-arm" class="platform-instructions">
+                    <div class="code-block">
+                        <pre><code>curl -LO https://github.com/helgesverre/dbdump/releases/latest/download/dbdump-linux-arm64.tar.gz
+tar -xzf dbdump-linux-arm64.tar.gz
+chmod +x dbdump-linux-arm64
+sudo mv dbdump-linux-arm64 /usr/local/bin/dbdump</code></pre>
+                        <button class="copy-btn" data-copy="curl -LO https://github.com/helgesverre/dbdump/releases/latest/download/dbdump-linux-arm64.tar.gz
+tar -xzf dbdump-linux-arm64.tar.gz
+chmod +x dbdump-linux-arm64
+sudo mv dbdump-linux-arm64 /usr/local/bin/dbdump">Copy</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="requirement">
+                <strong>Requirement:</strong> <code>mysqldump</code> must be in your PATH.
+                <details>
+                    <summary>How to install mysqldump</summary>
+                    <div class="details-content">
+                        <p><strong>macOS:</strong></p>
+                        <div class="code-block">
+                            <pre><code>brew install mysql-client</code></pre>
+                            <button class="copy-btn" data-copy="brew install mysql-client">Copy</button>
+                        </div>
+                        <p><strong>Ubuntu/Debian:</strong></p>
+                        <div class="code-block">
+                            <pre><code>sudo apt-get install mysql-client</code></pre>
+                            <button class="copy-btn" data-copy="sudo apt-get install mysql-client">Copy</button>
+                        </div>
+                        <p><strong>CentOS/RHEL:</strong></p>
+                        <div class="code-block">
+                            <pre><code>sudo yum install mysql</code></pre>
+                            <button class="copy-btn" data-copy="sudo yum install mysql">Copy</button>
+                        </div>
+                    </div>
+                </details>
+            </div>
+
+            <div class="verify">
+                <p>Verify installation:</p>
+                <div class="code-block">
+                    <pre><code>dbdump --help</code></pre>
+                    <button class="copy-btn" data-copy="dbdump --help">Copy</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- User Guide -->
+        <section id="guide" class="guide">
+            <h2>User Guide</h2>
+
+            <!-- How it Works -->
+            <article class="guide-section">
+                <h3>How It Works</h3>
+                <p>dbdump uses a two-phase approach to ensure your database structure stays intact:</p>
+                <ol>
+                    <li><strong>Phase 1 - Structure:</strong> Dumps the schema (CREATE TABLE) for ALL tables</li>
+                    <li><strong>Phase 2 - Data:</strong> Dumps data only for tables you want to keep</li>
+                </ol>
+                <p>This means excluded tables will exist in your dump as empty tables, so foreign keys never break.</p>
+            </article>
+
+            <!-- Commands -->
+            <article class="guide-section">
+                <h3>Commands</h3>
+
+                <h4>dump</h4>
+                <p>Create a database dump with smart exclusions.</p>
+                <div class="code-block">
+                    <pre><code># Interactive mode (select tables visually)
+dbdump dump -h localhost -u root -d mydb
+
+# Auto mode (use smart defaults)
+dbdump dump -h localhost -u root -d mydb --auto
+
+# Custom output file
+dbdump dump -h localhost -u root -d mydb -o backup.sql
+
+# Dry run (preview what will be excluded)
+dbdump dump -h localhost -u root -d mydb --dry-run</code></pre>
+                    <button class="copy-btn" data-copy="dbdump dump -h localhost -u root -d mydb --auto">Copy</button>
+                </div>
+
+                <h4>list</h4>
+                <p>View all tables with their sizes before dumping.</p>
+                <div class="code-block">
+                    <pre><code>dbdump list -h localhost -u root -d mydb</code></pre>
+                    <button class="copy-btn" data-copy="dbdump list -h localhost -u root -d mydb">Copy</button>
+                </div>
+            </article>
+
+            <!-- Connection Options -->
+            <article class="guide-section">
+                <h3>Connection Options</h3>
+                <table class="options-table">
+                    <thead>
+                        <tr><th>Flag</th><th>Short</th><th>Description</th><th>Default</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><code>--host</code></td><td><code>-H</code></td><td>Database host</td><td>127.0.0.1</td></tr>
+                        <tr><td><code>--port</code></td><td><code>-P</code></td><td>Database port</td><td>3306</td></tr>
+                        <tr><td><code>--user</code></td><td><code>-u</code></td><td>Database user</td><td>-</td></tr>
+                        <tr><td><code>--password</code></td><td><code>-p</code></td><td>Database password</td><td>env var</td></tr>
+                        <tr><td><code>--database</code></td><td><code>-d</code></td><td>Database name</td><td>-</td></tr>
+                    </tbody>
+                </table>
+                <p class="note">Tip: Use <code>DBDUMP_MYSQL_PWD</code> environment variable instead of <code>-p</code> for security.</p>
+            </article>
+
+            <!-- Dump Options -->
+            <article class="guide-section">
+                <h3>Dump Options</h3>
+                <table class="options-table">
+                    <thead>
+                        <tr><th>Flag</th><th>Description</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><code>--output, -o</code></td><td>Output file path (default: <code>{database}_{timestamp}.sql</code>)</td></tr>
+                        <tr><td><code>--config, -c</code></td><td>Path to config file</td></tr>
+                        <tr><td><code>--exclude</code></td><td>Exclude specific table (can be used multiple times)</td></tr>
+                        <tr><td><code>--exclude-pattern</code></td><td>Exclude tables matching pattern (can be used multiple times)</td></tr>
+                        <tr><td><code>--auto</code></td><td>Use smart defaults without interaction</td></tr>
+                        <tr><td><code>--dry-run</code></td><td>Show what would be excluded without dumping</td></tr>
+                        <tr><td><code>--no-progress</code></td><td>Disable progress bar</td></tr>
+                    </tbody>
+                </table>
+            </article>
+
+            <!-- Excluding Tables -->
+            <article class="guide-section">
+                <h3>Excluding Tables</h3>
+                <p>Three ways to exclude tables:</p>
+
+                <h4>1. Command Line</h4>
+                <div class="code-block">
+                    <pre><code>dbdump dump -u root -d mydb \
+  --exclude sessions \
+  --exclude cache \
+  --exclude-pattern "log_*" \
+  --exclude-pattern "temp_*"</code></pre>
+                    <button class="copy-btn" data-copy="dbdump dump -u root -d mydb --exclude sessions --exclude cache --exclude-pattern 'log_*'">Copy</button>
+                </div>
+
+                <h4>2. Project Config File</h4>
+                <p>Create a YAML file for your project:</p>
+                <div class="code-block">
+                    <pre><code># myproject.yaml
+name: "My Project"
+exclude:
+  exact:
+    - audits
+    - sessions
+    - cache
+  patterns:
+    - "temp_*"
+    - "*_backup"</code></pre>
+                    <button class="copy-btn" data-copy='name: "My Project"
+exclude:
+  exact:
+    - audits
+    - sessions
+    - cache
+  patterns:
+    - "temp_*"
+    - "*_backup"'>Copy</button>
+                </div>
+                <p>Use it with:</p>
+                <div class="code-block">
+                    <pre><code>dbdump dump -u root -d mydb --config ./myproject.yaml</code></pre>
+                    <button class="copy-btn" data-copy="dbdump dump -u root -d mydb --config ./myproject.yaml">Copy</button>
+                </div>
+
+                <h4>3. Global Config</h4>
+                <p>Create <code>~/.dbdump.yaml</code> for settings that apply to all dumps:</p>
+                <div class="code-block">
+                    <pre><code># ~/.dbdump.yaml
+name: "Global Defaults"
+exclude:
+  exact:
+    - activity_logs
+  patterns:
+    - "old_*"</code></pre>
+                    <button class="copy-btn" data-copy='# ~/.dbdump.yaml
+name: "Global Defaults"
+exclude:
+  exact:
+    - activity_logs
+  patterns:
+    - "old_*"'>Copy</button>
+                </div>
+            </article>
+
+            <!-- Default Excludes -->
+            <article class="guide-section">
+                <h3>Default Excludes</h3>
+                <p>dbdump automatically excludes these common "noisy" tables:</p>
+                <div class="two-col">
+                    <div>
+                        <p><strong>Exact matches:</strong></p>
+                        <ul>
+                            <li>audits</li>
+                            <li>sessions</li>
+                            <li>cache</li>
+                            <li>cache_locks</li>
+                            <li>failed_jobs</li>
+                            <li>telescope_entries</li>
+                            <li>telescope_entries_tags</li>
+                            <li>telescope_monitoring</li>
+                            <li>pulse_entries</li>
+                            <li>pulse_aggregates</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <p><strong>Patterns:</strong></p>
+                        <ul>
+                            <li>telescope_*</li>
+                            <li>pulse_*</li>
+                            <li>*_cache</li>
+                        </ul>
+                    </div>
+                </div>
+                <p class="note">These are always applied. Your config adds to them, it doesn't replace them.</p>
+            </article>
+
+            <!-- Interactive Mode -->
+            <article class="guide-section">
+                <h3>Interactive Mode</h3>
+                <p>When you run without <code>--auto</code>, you get a visual table selector:</p>
+                <table class="options-table">
+                    <thead>
+                        <tr><th>Key</th><th>Action</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><code>Arrow Up/Down</code> or <code>j/k</code></td><td>Move cursor</td></tr>
+                        <tr><td><code>Space</code></td><td>Toggle table selection</td></tr>
+                        <tr><td><code>Enter</code></td><td>Confirm and start dump</td></tr>
+                        <tr><td><code>Ctrl+C</code></td><td>Cancel</td></tr>
+                    </tbody>
+                </table>
+                <p>Selected tables will have their <em>data excluded</em> (structure is always kept).</p>
+            </article>
+
+            <!-- Examples -->
+            <article class="guide-section">
+                <h3>Common Examples</h3>
+
+                <h4>Dump production for local development</h4>
+                <div class="code-block">
+                    <pre><code>export DBDUMP_MYSQL_PWD=secret
+dbdump dump -H db.example.com -u readonly -d myapp_prod --auto -o dev-db.sql</code></pre>
+                    <button class="copy-btn" data-copy="export DBDUMP_MYSQL_PWD=secret
+dbdump dump -H db.example.com -u readonly -d myapp_prod --auto -o dev-db.sql">Copy</button>
+                </div>
+
+                <h4>Preview before dumping</h4>
+                <div class="code-block">
+                    <pre><code>dbdump list -u root -d mydb        # See table sizes
+dbdump dump -u root -d mydb --dry-run   # Preview exclusions</code></pre>
+                    <button class="copy-btn" data-copy="dbdump list -u root -d mydb">Copy</button>
+                </div>
+
+                <h4>Laravel project with extra exclusions</h4>
+                <div class="code-block">
+                    <pre><code>dbdump dump -u root -d laravel_db \
+  --exclude jobs \
+  --exclude notifications \
+  --exclude password_resets \
+  --auto</code></pre>
+                    <button class="copy-btn" data-copy="dbdump dump -u root -d laravel_db --exclude jobs --exclude notifications --exclude password_resets --auto">Copy</button>
+                </div>
+
+                <h4>Restore a dump</h4>
+                <div class="code-block">
+                    <pre><code>mysql -u root -p mydb < dump_file.sql</code></pre>
+                    <button class="copy-btn" data-copy="mysql -u root -p mydb < dump_file.sql">Copy</button>
+                </div>
+            </article>
+
+            <!-- Troubleshooting -->
+            <article class="guide-section">
+                <h3>Troubleshooting</h3>
+
+                <details>
+                    <summary>"mysqldump is required but not found in PATH"</summary>
+                    <div class="details-content">
+                        <p>Install MySQL client tools for your system (see installation section above).</p>
+                    </div>
+                </details>
+
+                <details>
+                    <summary>"failed to connect to database"</summary>
+                    <div class="details-content">
+                        <p>Check that:</p>
+                        <ul>
+                            <li>Database is running</li>
+                            <li>Host, port, user, password are correct</li>
+                            <li>User has SELECT, SHOW VIEW, TRIGGER, LOCK TABLES permissions</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <details>
+                    <summary>Dump is still too large</summary>
+                    <div class="details-content">
+                        <p>Use <code>dbdump list</code> to find large tables, then add more exclusions with <code>--exclude</code> or update your config file.</p>
+                    </div>
+                </details>
+
+                <details>
+                    <summary>Pattern not matching tables</summary>
+                    <div class="details-content">
+                        <p>Patterns use glob syntax: <code>*</code> matches any characters, <code>?</code> matches one character. Use quotes around patterns on the command line.</p>
+                    </div>
+                </details>
+            </article>
+
+            <!-- FAQ -->
+            <article class="guide-section">
+                <h3>FAQ</h3>
+
+                <details>
+                    <summary>Does dbdump delete my data?</summary>
+                    <div class="details-content">
+                        <p>No. dbdump only reads from your database. It never modifies your source database.</p>
+                    </div>
+                </details>
+
+                <details>
+                    <summary>Will excluding tables break foreign keys?</summary>
+                    <div class="details-content">
+                        <p>No. All table structures are preserved. Only the data is excluded for specified tables.</p>
+                    </div>
+                </details>
+
+                <details>
+                    <summary>Can I dump only the schema?</summary>
+                    <div class="details-content">
+                        <p>Yes! Exclude all tables: <code>dbdump dump -u root -d mydb --exclude-pattern "*"</code></p>
+                    </div>
+                </details>
+
+                <details>
+                    <summary>Is it safe on production?</summary>
+                    <div class="details-content">
+                        <p>Yes, dbdump only performs read operations. Consider running during low-traffic periods or using a read replica.</p>
+                    </div>
+                </details>
+            </article>
+        </section>
+    </main>
+
+    <footer>
+        <p>
+            <a href="https://github.com/helgesverre/dbdump">GitHub</a>
+            <span class="sep">|</span>
+            <a href="https://github.com/helgesverre/dbdump/releases">Releases</a>
+            <span class="sep">|</span>
+            <a href="https://github.com/helgesverre/dbdump/blob/main/LICENSE">MIT License</a>
+        </p>
+        <p class="credit">Built by <a href="https://github.com/helgesverre">Helge Sverre</a></p>
+    </footer>
+
+    <script>
+        // Copy button functionality
+        document.querySelectorAll('.copy-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const text = btn.dataset.copy;
+                try {
+                    await navigator.clipboard.writeText(text);
+                    const original = btn.textContent;
+                    btn.textContent = 'Copied!';
+                    btn.classList.add('copied');
+                    setTimeout(() => {
+                        btn.textContent = original;
+                        btn.classList.remove('copied');
+                    }, 2000);
+                } catch (err) {
+                    btn.textContent = 'Failed';
+                    setTimeout(() => btn.textContent = 'Copy', 2000);
+                }
+            });
+        });
+
+        // Platform selector
+        document.querySelectorAll('.platform-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.platform-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.platform-instructions').forEach(p => p.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById(btn.dataset.platform).classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>
