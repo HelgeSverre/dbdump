@@ -11,7 +11,7 @@ RESULTS_DIR="$PROJECT_ROOT/benchmark-results"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
 # Configuration
-DATABASE="${1:-crescat_dump}"
+DATABASE="${1:-example_db}"
 ITERATIONS="${2:-3}"
 MYSQL_HOST="${MYSQL_HOST:-127.0.0.1}"
 MYSQL_USER="${MYSQL_USER:-root}"

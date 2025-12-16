@@ -5,7 +5,7 @@ This document explains how to run performance benchmarks for dbdump.
 ## Quick Start
 
 ```bash
-# Run default benchmark (crescat_dump, 3 iterations)
+# Run default benchmark (example_db, 3 iterations)
 make bench
 
 # Quick single-iteration benchmark
@@ -14,7 +14,7 @@ make bench-quick
 # Benchmark specific database with custom iterations
 make bench DB=mydb ITER=5
 
-# Run benchmarks on configured test databases (crescat_dump, crescat_dump_2, crescat_dump_3)
+# Run benchmarks on configured test databases (example_db, example_db_2, example_db_3)
 make bench-all
 ```
 
@@ -59,7 +59,7 @@ Before making any changes:
 
 ```bash
 # Create baseline with 5 iterations for statistical confidence
-make bench DB=crescat_dump ITER=5
+make bench DB=example_db ITER=5
 
 # Note the median throughput from the output
 # Example: Median throughput: 115.23 MB/s
@@ -76,7 +76,7 @@ Edit code, apply optimizations, etc.
 make build
 
 # Run benchmark again
-make bench DB=crescat_dump ITER=5
+make bench DB=example_db ITER=5
 
 # Compare median throughput to baseline
 # Calculate improvement: ((new - old) / old) * 100
@@ -89,8 +89,8 @@ make bench DB=crescat_dump ITER=5
 ls -lt benchmark-results/ | head -5
 
 # Compare two specific runs
-diff benchmark-results/benchmark_crescat_dump_20251021_120000_summary.txt \
-     benchmark-results/benchmark_crescat_dump_20251021_130000_summary.txt
+diff benchmark-results/benchmark_example_db_20251021_120000_summary.txt \
+     benchmark-results/benchmark_example_db_20251021_130000_summary.txt
 ```
 
 ## Performance Targets
@@ -121,7 +121,7 @@ A performance regression is indicated if:
 go build -o bin/dbdump ./cmd/dbdump
 
 # Run with memory profiling
-GODEBUG=gctrace=1 ./bin/dbdump dump -H 127.0.0.1 -u root -d crescat_dump --auto
+GODEBUG=gctrace=1 ./bin/dbdump dump -H 127.0.0.1 -u root -d example_db --auto
 
 # Analyze memory profile (if instrumented)
 go tool pprof bin/dbdump mem.prof
@@ -140,7 +140,7 @@ defer pprof.StopCPUProfile()
 
 # Rebuild and run
 make build
-./bin/dbdump dump -H 127.0.0.1 -u root -d crescat_dump --auto
+./bin/dbdump dump -H 127.0.0.1 -u root -d example_db --auto
 
 # Analyze
 go tool pprof bin/dbdump cpu.prof
@@ -157,12 +157,12 @@ mysqldump --verbose \
   --max-allowed-packet=1G \
   --net-buffer-length=1M \
   --skip-comments \
-  --no-data crescat_dump \
+  --no-data example_db \
   > /dev/null 2>&1
 
 # Time each phase separately
-time mysqldump --no-data crescat_dump > structure.sql
-time mysqldump --no-create-info crescat_dump > data.sql
+time mysqldump --no-data example_db > structure.sql
+time mysqldump --no-create-info example_db > data.sql
 ```
 
 ## Environment Variables
@@ -341,7 +341,7 @@ If results vary wildly between runs:
 mysql -u root -e "SHOW DATABASES"
 
 # Verify database exists
-mysql -u root -e "USE crescat_dump; SELECT COUNT(*) FROM information_schema.tables"
+mysql -u root -e "USE example_db; SELECT COUNT(*) FROM information_schema.tables"
 ```
 
 ## Best Practices
@@ -357,7 +357,7 @@ mysql -u root -e "USE crescat_dump; SELECT COUNT(*) FROM information_schema.tabl
 
 ```bash
 # 1. Create baseline before optimization
-make bench DB=crescat_dump ITER=5
+make bench DB=example_db ITER=5
 # Note median: 115.23 MB/s
 
 # 2. Make optimization (increase buffer size)
@@ -365,15 +365,15 @@ make bench DB=crescat_dump ITER=5
 
 # 3. Rebuild and test
 make build
-make bench DB=crescat_dump ITER=5
+make bench DB=example_db ITER=5
 # Note median: 125.45 MB/s
 
 # 4. Calculate improvement
 # (125.45 - 115.23) / 115.23 * 100 = 8.87% improvement
 
 # 5. Test on other databases to verify
-make bench DB=crescat_dump_2 ITER=3
-make bench DB=crescat_dump_3 ITER=3
+make bench DB=example_db_2 ITER=3
+make bench DB=example_db_3 ITER=3
 
 # 6. Document in OPTIMIZATION_HISTORY.md
 ```

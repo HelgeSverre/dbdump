@@ -175,28 +175,28 @@ check: fmt vet test
 # === Benchmarking ===
 
 [group('bench')]
-[doc('Run benchmark (default: crescat_dump, 3 iterations)')]
-bench db="crescat_dump" iter="3": build
+[doc('Run benchmark (default: example_db, 3 iterations)')]
+bench db="example_db" iter="3": build
     @./scripts/benchmark.sh {{db}} {{iter}}
 
 [group('bench')]
 [doc('Quick benchmark (1 iteration)')]
-bench-quick db="crescat_dump": build
+bench-quick db="example_db": build
     @./scripts/benchmark.sh {{db}} 1
 
 [group('bench')]
 [doc('Benchmark all available databases')]
 bench-all: build
     @echo "Running benchmarks on all available databases..."
-    @./scripts/benchmark.sh crescat_dump 3
-    @./scripts/benchmark.sh crescat_dump_2 3
-    @./scripts/benchmark.sh crescat_dump_3 3
+    @./scripts/benchmark.sh example_db 3
+    @./scripts/benchmark.sh example_db_2 3
+    @./scripts/benchmark.sh example_db_3 3
 
 [group('bench')]
 [doc('Compare benchmarks before and after changes')]
 bench-compare:
-    @echo "Run this to create baseline: just bench crescat_dump 5"
-    @echo "Then make your changes and run: just bench crescat_dump 5"
+    @echo "Run this to create baseline: just bench example_db 5"
+    @echo "Then make your changes and run: just bench example_db 5"
     @echo "Results will be in benchmark-results/ directory"
 
 # === Development ===

@@ -45,7 +45,7 @@ clean: ## Remove build artifacts
 test: ## Run tests
 	go test -v ./...
 
-bench: build ## Run benchmark (default: crescat_dump, 3 iterations)
+bench: build ## Run benchmark (default: example_db, 3 iterations)
 	@./scripts/benchmark.sh $(DB) $(ITER)
 
 bench-quick: build ## Quick benchmark (1 iteration)
@@ -53,13 +53,13 @@ bench-quick: build ## Quick benchmark (1 iteration)
 
 bench-all: build ## Benchmark all available databases
 	@echo "Running benchmarks on all available databases..."
-	@./scripts/benchmark.sh crescat_dump 3
-	@./scripts/benchmark.sh crescat_dump_2 3
-	@./scripts/benchmark.sh crescat_dump_3 3
+	@./scripts/benchmark.sh example_db 3
+	@./scripts/benchmark.sh example_db_2 3
+	@./scripts/benchmark.sh example_db_3 3
 
 bench-compare: ## Compare benchmarks before and after changes
-	@echo "Run this to create baseline: make bench DB=crescat_dump ITER=5"
-	@echo "Then make your changes and run: make bench DB=crescat_dump ITER=5"
+	@echo "Run this to create baseline: make bench DB=example_db ITER=5"
+	@echo "Then make your changes and run: make bench DB=example_db ITER=5"
 	@echo "Results will be in benchmark-results/ directory"
 
 fmt: ## Format code
