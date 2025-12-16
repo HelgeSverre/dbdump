@@ -26,7 +26,15 @@ cache records. These tables can make dumps take hours and consume gigabytes of s
 
 ## Installation
 
-### Pre-built Binaries (Recommended)
+### Using Go
+
+If you have Go 1.23+ installed:
+
+```bash
+go install github.com/helgesverre/dbdump/cmd/dbdump@latest
+```
+
+### Pre-built Binaries
 
 Download the latest release for your platform from the [releases page](https://github.com/helgesverre/dbdump/releases).
 
@@ -91,7 +99,7 @@ cd dbdump
 make install
 ```
 
-Requires Go 1.24+.
+Requires Go 1.23+.
 
 ## Quick Start
 

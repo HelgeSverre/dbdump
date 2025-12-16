@@ -99,7 +99,16 @@
         <!-- Install -->
         <section id="install" class="install">
             <h2>Installation</h2>
-            <p class="lead">Download the binary for your platform and add it to your PATH.</p>
+
+            <h3>Using Go</h3>
+            <p>If you have Go 1.23+ installed:</p>
+            <div class="code-block">
+                <pre><code>go install github.com/helgesverre/dbdump/cmd/dbdump@latest</code></pre>
+                <button class="copy-btn" data-copy="go install github.com/helgesverre/dbdump/cmd/dbdump@latest">Copy</button>
+            </div>
+
+            <h3>Pre-built Binaries</h3>
+            <p>Download the binary for your platform:</p>
 
             <div class="platform-selector">
                 <button class="platform-btn active" data-platform="mac-arm">macOS (Apple Silicon)</button>
