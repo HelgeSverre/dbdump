@@ -6,7 +6,7 @@ Before pushing a release tag to GitHub, you can test the entire release build pr
 
 ```bash
 # Test the release build process
-make test-release VERSION=v1.1.0-test
+just test-release VERSION=v1.1.0-test
 ```
 
 This simulates what GitHub Actions will do:
@@ -21,7 +21,7 @@ This simulates what GitHub Actions will do:
 ### 1. Build All Platforms
 
 ```bash
-make build-all
+just build-all
 ```
 
 Creates binaries in `bin/`:
@@ -113,7 +113,7 @@ The local test script (`scripts/test-release.sh`) mimics what happens in `.githu
 | Step | Local Script | GitHub Actions |
 |------|--------------|----------------|
 | Clean build | ✅ `rm -rf bin/` | ✅ Fresh runner |
-| Build all | ✅ `make build-all` | ✅ Same |
+| Build all | ✅ `just build-all` | ✅ Same |
 | Checksums | ✅ `sha256sum` | ✅ Same |
 | Archives | ✅ `tar -czf`, `zip` | ✅ Same |
 | Test binary | ✅ `--help` | ✅ Same on each OS |
@@ -149,8 +149,8 @@ go version
 # Should be 1.24.6 or compatible
 
 # Clean and rebuild
-make clean
-make build-all
+just clean
+just build-all
 ```
 
 ### Archives Are Too Large
@@ -170,7 +170,7 @@ rm -rf bin/dbdump-v*.tar.gz bin/dbdump-v*.zip
 rm -f bin/checksums.txt
 
 # Or clean everything
-make clean
+just clean
 ```
 
 ## Next Steps
@@ -232,4 +232,4 @@ Total release size: ~25.9M (compressed)
 
 - [RELEASE.md](RELEASE.md) - Complete release process
 - [.github/workflows/release.yml](.github/workflows/release.yml) - GitHub Actions workflow
-- [Makefile](Makefile) - Build targets
+- [justfile](../justfile) - Build targets

@@ -41,7 +41,7 @@ echo ""
 # Check if binary exists
 if [ ! -f "$BINARY" ]; then
     echo -e "${RED}Error: Binary not found at $BINARY${NC}"
-    echo "Run 'make build' first"
+    echo "Run 'just build' first"
     exit 1
 fi
 

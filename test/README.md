@@ -122,7 +122,7 @@ export MYSQL_ROOT_PASSWORD=testpass123
 
 # Prerequisites:
 # - docker-compose must be running
-# - dbdump must be built (make build)
+# - dbdump must be built (just build)
 ```
 
 ### What Gets Tested
@@ -284,11 +284,11 @@ time ./bin/dbdump dump -H 127.0.0.1 -P 3308 -u root -d testdb --auto
 time mysqldump -h 127.0.0.1 -P 3308 -u root -ptestpass123 testdb > standard_dump.sql
 ```
 
-### Using Make Targets
+### Using Just Targets
 
 ```bash
-# Run benchmarks (if Make targets are set up)
-make bench DB=testdb ITER=5
+# Run benchmarks
+just bench testdb 5
 ```
 
 ---
@@ -337,7 +337,7 @@ mysql -h 127.0.0.1 -P 3308 -u root -ptestpass123 -e "CREATE DATABASE IF NOT EXIS
 
 ```bash
 # Rebuild dbdump
-make clean build
+just clean && just build
 
 # Regenerate test data
 ./test/generate-sample-data.sh small 127.0.0.1 3308 testdb
@@ -385,7 +385,7 @@ jobs:
           go-version: '1.23'
       
       - name: Build
-        run: make build
+        run: go build -o bin/dbdump ./cmd/dbdump
       
       - name: Start test databases
         run: docker compose up -d

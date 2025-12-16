@@ -224,7 +224,7 @@ echo ""
 
 # Build dbdump
 log_info "Building dbdump..."
-make build || { log_error "Build failed"; exit 1; }
+go build -o bin/dbdump ./cmd/dbdump || { log_error "Build failed"; exit 1; }
 
 # Start Docker Compose (skip in CI as services are already running)
 if [ -z "${CI}" ]; then

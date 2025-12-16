@@ -96,10 +96,10 @@ dbdump --help
 ```bash
 git clone https://github.com/helgesverre/dbdump.git
 cd dbdump
-make install
+just install
 ```
 
-Requires Go 1.23+.
+Requires Go 1.23+ and [just](https://github.com/casey/just).
 
 ## Quick Start
 
@@ -332,16 +332,16 @@ Result: A complete database dump with empty noisy tables.
 
 ```bash
 # Build for current platform
-make build
+just build
 
 # Build for all platforms
-make build-all
+just build-all
 
 # Run tests
-make test
+just test
 
 # Format code
-make fmt
+just fmt
 ```
 
 ### Testing
@@ -391,7 +391,7 @@ dump-tool/
 │   ├── patterns/        # Pattern matching
 │   └── ui/              # Interactive UI and progress
 ├── configs/             # Default configurations
-└── Makefile             # Build commands
+└── justfile             # Build commands
 ```
 
 ## Contributing

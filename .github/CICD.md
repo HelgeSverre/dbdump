@@ -15,7 +15,7 @@ This document describes the continuous integration and deployment workflows for 
 **Jobs:**
 
 #### Security Tests
-- Runs `make verify-security`
+- Runs `just verify-security`
 - Verifies passwords are hidden from process lists
 - Checks file permissions and code patterns
 - **Runtime:** ~30 seconds
@@ -155,10 +155,10 @@ Before pushing, run:
 
 ```bash
 # Quick check
-make verify-security
+just verify-security
 
 # Full local test suite
-make test-all
+just test-all
 ```
 
 ### Creating a Release

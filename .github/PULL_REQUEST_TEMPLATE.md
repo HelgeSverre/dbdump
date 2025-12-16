@@ -32,9 +32,9 @@ Fixes #(issue number)
 
 <!-- Describe the testing you've done -->
 
-- [ ] Unit tests pass (`make test`)
-- [ ] Integration tests pass (`make test-integration-quick` or `make test-integration`)
-- [ ] Security tests pass (`make verify-security`)
+- [ ] Unit tests pass (`just test`)
+- [ ] Integration tests pass (`just test-integration-quick` or `just test-integration`)
+- [ ] Security tests pass (`just verify-security`)
 - [ ] Manual testing completed
 
 ### Test Results

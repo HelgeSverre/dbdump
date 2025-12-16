@@ -67,7 +67,7 @@ sudo mv dbdump-darwin-arm64 /usr/local/bin/dbdump
 ```bash
 git clone https://github.com/helgesverre/dbdump.git
 cd dbdump
-make install
+just install
 ```
 
 ### Verify Installation

@@ -38,7 +38,7 @@ log_info() {
 
 # Ensure binary exists
 if [ ! -f "$PROJECT_ROOT/bin/dbdump" ]; then
-    echo -e "${RED}Error: Binary not found. Run 'make build' first.${NC}"
+    echo -e "${RED}Error: Binary not found. Run 'just build' first.${NC}"
     exit 1
 fi
 

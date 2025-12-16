@@ -122,7 +122,7 @@ The release workflow automatically extracts this section for release notes.
 
 Before creating a release tag:
 
-- [ ] All tests passing locally (`make test-all`)
+- [ ] All tests passing locally (`just test-all`)
 - [ ] CHANGELOG.md updated with version changes
 - [ ] Security fixes documented (if any)
 - [ ] Breaking changes clearly documented
@@ -195,7 +195,7 @@ The verification step should catch this, but if not:
 
 ### Build Process
 
-The release workflow uses `make build-all` which:
+The release workflow uses `just build-all` which:
 1. Sets version info via ldflags
 2. Cross-compiles for 5 platforms
 3. Outputs to `bin/` directory

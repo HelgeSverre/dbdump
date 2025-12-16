@@ -20,7 +20,7 @@ mkdir -p bin/
 
 # Build all platforms
 echo "🔨 Building binaries for all platforms..."
-make build-all
+just build-all
 echo ""
 
 # Generate checksums

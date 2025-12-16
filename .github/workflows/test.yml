@@ -23,10 +23,10 @@ jobs:
           cache: true
       
       - name: Build binary
-        run: make build
-      
+        run: go build -o bin/dbdump ./cmd/dbdump
+
       - name: Run security verification
-        run: make verify-security
+        run: ./test/verify-security.sh
       
       - name: Upload security test results
         if: always()
@@ -148,7 +148,7 @@ jobs:
           sleep 10
       
       - name: Build binary
-        run: make build
+        run: go build -o bin/dbdump ./cmd/dbdump
       
       - name: Generate test data on MySQL 5.7
         run: ./test/generate-sample-data.sh small 127.0.0.1 3307 testdb
@@ -233,7 +233,7 @@ jobs:
           cache: true
       
       - name: Build binary
-        run: make build
+        run: go build -o bin/dbdump ./cmd/dbdump
       
       - name: Test binary runs
         shell: bash

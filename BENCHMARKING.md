@@ -6,16 +6,16 @@ This document explains how to run performance benchmarks for dbdump.
 
 ```bash
 # Run default benchmark (example_db, 3 iterations)
-make bench
+just bench
 
 # Quick single-iteration benchmark
-make bench-quick
+just bench-quick
 
 # Benchmark specific database with custom iterations
-make bench DB=mydb ITER=5
+just bench mydb 5
 
 # Run benchmarks on configured test databases (example_db, example_db_2, example_db_3)
-make bench-all
+just bench-all
 ```
 
 ## Benchmark Results
@@ -59,7 +59,7 @@ Before making any changes:
 
 ```bash
 # Create baseline with 5 iterations for statistical confidence
-make bench DB=example_db ITER=5
+just bench example_db 5
 
 # Note the median throughput from the output
 # Example: Median throughput: 115.23 MB/s
@@ -73,10 +73,10 @@ Edit code, apply optimizations, etc.
 
 ```bash
 # Rebuild with changes
-make build
+just build
 
 # Run benchmark again
-make bench DB=example_db ITER=5
+just bench example_db 5
 
 # Compare median throughput to baseline
 # Calculate improvement: ((new - old) / old) * 100
@@ -139,7 +139,7 @@ pprof.StartCPUProfile(f)
 defer pprof.StopCPUProfile()
 
 # Rebuild and run
-make build
+just build
 ./bin/dbdump dump -H 127.0.0.1 -u root -d example_db --auto
 
 # Analyze
@@ -171,13 +171,13 @@ Control benchmark behavior with environment variables:
 
 ```bash
 # Use different MySQL host
-MYSQL_HOST=prod.example.com make bench
+MYSQL_HOST=prod.example.com just bench
 
 # Use different credentials
-MYSQL_USER=readonly MYSQL_PASSWORD=secret make bench
+MYSQL_USER=readonly MYSQL_PASSWORD=secret just bench
 
 # Combine with custom database
-MYSQL_HOST=remote.db make bench DB=production ITER=3
+MYSQL_HOST=remote.db just bench production 3
 ```
 
 ## Continuous Integration
@@ -220,7 +220,7 @@ jobs:
           mysql -h 127.0.0.1 -u root -proot test < test/fixtures/benchmark.sql
 
       - name: Run benchmark
-        run: make bench DB=test ITER=5
+        run: just bench test 5
 
       - name: Upload results
         uses: actions/upload-artifact@v2
@@ -357,23 +357,23 @@ mysql -u root -e "USE example_db; SELECT COUNT(*) FROM information_schema.tables
 
 ```bash
 # 1. Create baseline before optimization
-make bench DB=example_db ITER=5
+just bench example_db 5
 # Note median: 115.23 MB/s
 
 # 2. Make optimization (increase buffer size)
 # Edit internal/database/dumper.go
 
 # 3. Rebuild and test
-make build
-make bench DB=example_db ITER=5
+just build
+just bench example_db 5
 # Note median: 125.45 MB/s
 
 # 4. Calculate improvement
 # (125.45 - 115.23) / 115.23 * 100 = 8.87% improvement
 
 # 5. Test on other databases to verify
-make bench DB=example_db_2 ITER=3
-make bench DB=example_db_3 ITER=3
+just bench example_db_2 3
+just bench example_db_3 3
 
 # 6. Document in OPTIMIZATION_HISTORY.md
 ```

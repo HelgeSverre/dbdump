@@ -125,8 +125,8 @@ Updates automatically create PRs with:
 1. **Check logs:** Click on failed job in Actions tab
 2. **Reproduce locally:**
    ```bash
-   make test-all  # Run all tests
-   make build-all # Test multi-platform builds
+   just test-all  # Run all tests
+   just build-all # Test multi-platform builds
    ```
 
 ### Release Issues

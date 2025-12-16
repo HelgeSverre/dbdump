@@ -10,54 +10,54 @@ This guide explains how to run all tests for dbdump, including security verifica
 
 ```bash
 # Runs everything: builds binary, starts Docker, generates data, runs all tests
-make test-all
+just test-all
 ```
 
 ### Option 2: Quick Integration Test
 
 ```bash
 # Faster test with small dataset on MySQL 8.0 only
-make test-integration-quick
+just test-integration-quick
 ```
 
 ### Option 3: Security Tests Only
 
 ```bash
 # Just verify security fixes (password hiding, file perms)
-make verify-security
+just verify-security
 ```
 
 ---
 
-## Makefile Targets
+## Just Targets
 
 ### Testing Targets
 
 | Command | Description | Time | Use Case |
 |---------|-------------|------|----------|
-| `make verify-security` | Verify password hiding & file perms | ~5s | Security verification |
-| `make test-security` | Same as verify-security | ~5s | Alias |
-| `make test-integration-quick` | Quick test (1 DB, small data) | ~2m | Fast feedback |
-| `make test-integration` | Full test (4 DBs, all tests) | ~10m | Before release |
-| `make test-integration-clean` | Full test + cleanup | ~10m | CI/CD |
-| `make test-all` | Unit + integration tests | ~10m | Complete verification |
+| `just verify-security` | Verify password hiding & file perms | ~5s | Security verification |
+| `just test-security` | Same as verify-security | ~5s | Alias |
+| `just test-integration-quick` | Quick test (1 DB, small data) | ~2m | Fast feedback |
+| `just test-integration` | Full test (4 DBs, all tests) | ~10m | Before release |
+| `just test-integration-clean` | Full test + cleanup | ~10m | CI/CD |
+| `just test-all` | Unit + integration tests | ~10m | Complete verification |
 
 ### Docker Management
 
 | Command | Description |
 |---------|-------------|
-| `make test-docker-up` | Start all test databases |
-| `make test-docker-down` | Stop databases (keep data) |
-| `make test-docker-clean` | Stop databases + remove data |
+| `just test-docker-up` | Start all test databases |
+| `just test-docker-down` | Stop databases (keep data) |
+| `just test-docker-clean` | Stop databases + remove data |
 
 ### Data Generation
 
 | Command | Description | Size | Rows |
 |---------|-------------|------|------|
-| `make test-data-small` | Small dataset | ~10MB | ~15K total |
-| `make test-data-medium` | Medium dataset | ~100MB | ~160K total |
-| `make test-data-large` | Large dataset | ~1GB | ~1.6M total |
-| `make test-data-all` | Generate on all 4 databases | 4x small | - |
+| `just test-data-small` | Small dataset | ~10MB | ~15K total |
+| `just test-data-medium` | Medium dataset | ~100MB | ~160K total |
+| `just test-data-large` | Large dataset | ~1GB | ~1.6M total |
+| `just test-data-all` | Generate on all 4 databases | 4x small | - |
 
 ---
 
@@ -133,7 +133,7 @@ grep 'MYSQL_PWD' internal/database/dumper.go
 
 ```bash
 # Build binary
-make build
+just build
 
 # Run security verification
 ./test/verify-security.sh
@@ -166,22 +166,22 @@ Tests Failed: 0
 
 ```bash
 # 1. Start databases
-make test-docker-up
+just test-docker-up
 
 # 2. Generate test data
-make test-data-small
+just test-data-small
 
 # 3. Run integration tests
 ./test/integration-test.sh
 
 # 4. Cleanup
-make test-docker-down
+just test-docker-down
 ```
 
 **OR use one command:**
 
 ```bash
-make test-integration-quick
+just test-integration-quick
 ```
 
 ---
@@ -262,7 +262,7 @@ jobs:
         with:
           go-version: '1.23'
       - name: Security Tests
-        run: make verify-security
+        run: just verify-security
 
   integration:
     runs-on: ubuntu-latest
@@ -272,7 +272,7 @@ jobs:
         with:
           go-version: '1.23'
       - name: Integration Tests
-        run: make test-integration-clean
+        run: just test-integration-clean
 ```
 
 ---
@@ -304,8 +304,8 @@ nc -zv 127.0.0.1 3308
 docker compose logs mysql80
 
 # Restart containers
-make test-docker-clean
-make test-docker-up
+just test-docker-clean
+just test-docker-up
 ```
 
 ### Tests Hang or Timeout
@@ -316,10 +316,10 @@ pkill -f dbdump
 pkill -f mysqldump
 
 # Clean Docker
-make test-docker-clean
+just test-docker-clean
 
 # Start fresh
-make test-integration-quick
+just test-integration-quick
 ```
 
 ### Permission Denied Errors
@@ -387,8 +387,8 @@ While not automated in the test suite, you can benchmark manually:
 
 ```bash
 # Generate large dataset
-make test-docker-up
-make test-data-large
+just test-docker-up
+just test-data-large
 
 # Time dbdump
 time ./bin/dbdump dump -H 127.0.0.1 -P 3308 -u root -d testdb --auto
@@ -409,13 +409,13 @@ Run these commands before creating a release:
 
 ```bash
 # 1. Security verification
-make verify-security
+just verify-security
 
 # 2. Full integration tests
-make test-integration
+just test-integration
 
 # 3. Build all platforms
-make build-all
+just build-all
 
 # 4. Manual smoke test
 export DBDUMP_MYSQL_PWD=testpass123
@@ -427,7 +427,7 @@ mysql -h 127.0.0.1 -P 3308 -u root -ptestpass123 test_restore < testdb_*.sql
 mysql -h 127.0.0.1 -P 3308 -u root -ptestpass123 test_restore -e "SHOW TABLES;"
 
 # 6. Cleanup
-make test-docker-clean
+just test-docker-clean
 ```
 
 ---
