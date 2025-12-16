@@ -595,4 +595,8 @@ footer .credit {
     .platform-btn.active {
         color: #0a0a0a;
     }
+
+    .step-number {
+        color: #0a0a0a;
+    }
 }
