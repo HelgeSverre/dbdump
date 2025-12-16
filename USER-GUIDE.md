@@ -131,6 +131,7 @@ Configurations are merged in this order (later overrides earlier):
 dbdump comes with sensible defaults for common Laravel and PHP framework tables:
 
 **Exact table names:**
+- `activity_log`
 - `audits`
 - `sessions`
 - `cache`

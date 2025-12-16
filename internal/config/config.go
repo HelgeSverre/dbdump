@@ -11,6 +11,7 @@ import (
 // Default configuration as embedded constant
 const defaultConfigYAML = `default_excludes:
   exact:
+    - activity_log
     - audits
     - sessions
     - cache

@@ -256,6 +256,7 @@ dbdump includes smart defaults for common Laravel tables:
 
 **Exact matches:**
 
+- activity_log
 - audits
 - sessions
 - cache
