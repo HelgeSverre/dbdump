@@ -91,7 +91,7 @@ cd dbdump
 make install
 ```
 
-Requires Go 1.23+.
+Requires Go 1.24+.
 
 ## Quick Start
 
