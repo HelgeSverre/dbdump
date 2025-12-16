@@ -67,7 +67,7 @@ test:
 [doc('Start Docker Compose test databases')]
 test-docker-up:
     @echo "Starting test databases..."
-    docker-compose up -d
+    docker compose up -d
     @echo "Waiting for databases to be ready (30s)..."
     @sleep 30
     @echo "Databases ready!"
@@ -76,13 +76,13 @@ test-docker-up:
 [doc('Stop Docker Compose test databases')]
 test-docker-down:
     @echo "Stopping test databases..."
-    docker-compose down
+    docker compose down
 
 [group('test')]
 [doc('Stop Docker and remove all data volumes')]
 test-docker-clean:
     @echo "Stopping and cleaning test databases..."
-    docker-compose down -v
+    docker compose down -v
     @echo "All test data removed!"
 
 [group('test')]
