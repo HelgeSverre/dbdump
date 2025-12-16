@@ -124,6 +124,7 @@
                 <button class="platform-btn" data-platform="mac-intel">macOS (Intel)</button>
                 <button class="platform-btn" data-platform="linux-amd">Linux (AMD64)</button>
                 <button class="platform-btn" data-platform="linux-arm">Linux (ARM64)</button>
+                <button class="platform-btn" data-platform="windows">Windows (x64)</button>
             </div>
 
             <div class="platform-content">
@@ -175,6 +176,24 @@ chmod +x dbdump-linux-arm64
 sudo mv dbdump-linux-arm64 /usr/local/bin/dbdump">Copy</button>
                     </div>
                 </div>
+                <div id="windows" class="platform-instructions">
+                    <div class="code-block">
+                        <pre><code># Download and extract
+Invoke-WebRequest -Uri https://github.com/helgesverre/dbdump/releases/latest/download/dbdump-windows-amd64.zip -OutFile dbdump.zip
+Expand-Archive dbdump.zip -DestinationPath $HOME\dbdump -Force
+
+# Add to PATH (run once)
+$env:PATH += ";$HOME\dbdump"
+[Environment]::SetEnvironmentVariable("PATH", $env:PATH + ";$HOME\dbdump", "User")</code></pre>
+                        <button class="copy-btn" data-copy="# Download and extract
+Invoke-WebRequest -Uri https://github.com/helgesverre/dbdump/releases/latest/download/dbdump-windows-amd64.zip -OutFile dbdump.zip
+Expand-Archive dbdump.zip -DestinationPath $HOME\dbdump -Force
+
+# Add to PATH (run once)
+$env:PATH += &quot;;$HOME\dbdump&quot;
+[Environment]::SetEnvironmentVariable(&quot;PATH&quot;, $env:PATH + &quot;;$HOME\dbdump&quot;, &quot;User&quot;)">Copy</button>
+                    </div>
+                </div>
             </div>
 
             <div class="requirement">
@@ -196,6 +215,11 @@ sudo mv dbdump-linux-arm64 /usr/local/bin/dbdump">Copy</button>
                         <div class="code-block">
                             <pre><code>sudo yum install mysql</code></pre>
                             <button class="copy-btn" data-copy="sudo yum install mysql">Copy</button>
+                        </div>
+                        <p><strong>Windows:</strong></p>
+                        <div class="code-block">
+                            <pre><code>winget install Oracle.MySQL</code></pre>
+                            <button class="copy-btn" data-copy="winget install Oracle.MySQL">Copy</button>
                         </div>
                     </div>
                 </details>
