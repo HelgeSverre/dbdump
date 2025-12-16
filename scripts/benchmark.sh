@@ -1,6 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
+# Ensure consistent decimal separator for time/bc commands
+export LC_ALL=C
+
 # Benchmark script for dbdump performance testing
 # Usage: ./scripts/benchmark.sh [database] [iterations]
 
@@ -101,14 +104,20 @@ for i in $(seq 1 $ITERATIONS); do
     TIME_FILE="/tmp/dbdump_time_${i}.txt"
 
     # Run with time measurement
-    (/usr/bin/time -p "$BINARY" dump \
+    /usr/bin/time -p "$BINARY" dump \
         -H "$MYSQL_HOST" \
         -u "$MYSQL_USER" \
         ${MYSQL_PASSWORD:+-p "$MYSQL_PASSWORD"} \
         -d "$DATABASE" \
         --auto \
         -o "$OUTPUT_FILE" \
-        2>&1) 2> "$TIME_FILE" | grep -E "(Connected|Found|excluding|Starting|complete|Duration)" || true
+        > /tmp/dbdump_stdout_${i}.txt 2>&1
+
+    # Extract time output (last 3 lines of stderr)
+    tail -3 /tmp/dbdump_stdout_${i}.txt > "$TIME_FILE"
+
+    # Show relevant output
+    grep -E "(Connected|Found|excluding|Starting|complete|Duration)" /tmp/dbdump_stdout_${i}.txt || true
 
     # Parse timing results
     REAL_TIME=$(grep "^real" "$TIME_FILE" | awk '{print $2}')
