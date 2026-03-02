@@ -7,7 +7,7 @@ toolchain go1.24.6
 require (
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/go-sql-driver/mysql v1.9.3
-	github.com/schollz/progressbar/v3 v3.18.0
+	github.com/schollz/progressbar/v3 v3.19.0
 	github.com/spf13/cobra v1.10.2
 	gopkg.in/yaml.v3 v3.0.1
 )
