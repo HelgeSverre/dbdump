@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-03-02
+
+### Dependencies
+- Bumped actions/upload-artifact from 6 to 7
+- Bumped actions/download-artifact from 7 to 8
+- Bumped github.com/schollz/progressbar/v3 from 3.18.0 to 3.19.0
+
 ## [1.1.0] - 2025-12-16
 
 ### Added
@@ -278,7 +285,9 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ---
 
 <!-- Version comparison links -->
-[Unreleased]: https://github.com/helgesverre/dbdump/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/helgesverre/dbdump/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/helgesverre/dbdump/compare/v1.1.0...v1.1.1
+[1.1.0]: https://github.com/helgesverre/dbdump/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/helgesverre/dbdump/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/helgesverre/dbdump/compare/v0.9.0...v1.0.0
 [0.9.0]: https://github.com/helgesverre/dbdump/compare/v0.1.0...v0.9.0
