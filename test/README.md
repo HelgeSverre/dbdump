@@ -5,17 +5,8 @@ This directory contains testing tools and scripts for dbdump.
 ## Quick Start
 
 ```bash
-# Start test databases
-docker compose up -d
-
-# Generate sample data (medium size)
-./test/generate-sample-data.sh medium 127.0.0.1 3308 testdb
-
-# Run integration tests
+# Run the integration tests (builds the binary and starts Docker Compose locally)
 ./test/integration-test.sh
-
-# Stop test databases
-docker compose down
 ```
 
 ---
@@ -91,7 +82,7 @@ docker compose down -v
 - `telescope_entries` - Laravel Telescope data (should be excluded)
 
 **Database features:**
-- Stored procedure: `get_user_orders`
+- Stored procedure fixture: `get_user_orders` (not currently included in dumps)
 - Trigger: `after_order_insert` (creates audit log on order insert)
 - Foreign keys between tables
 - Indexes on common columns
@@ -120,9 +111,8 @@ export MYSQL_ROOT_PASSWORD=testpass123
 # Run full test suite on all databases
 ./test/integration-test.sh
 
-# Prerequisites:
-# - docker-compose must be running
-# - dbdump must be built (just build)
+# Optional quick smoke test (MySQL 8.0 only; local compose is cleaned up automatically)
+TEST_QUICK=1 ./test/integration-test.sh
 ```
 
 ### What Gets Tested
@@ -134,8 +124,8 @@ export MYSQL_ROOT_PASSWORD=testpass123
 
 #### Data Integrity Tests
 - ✓ Triggers included in structure dump
-- ✓ Stored procedures included in dump
-- ✓ No duplicate triggers/procedures
+- ✓ Stored procedure fixture exists, but routines are currently not dumped
+- ✓ No duplicate triggers
 - ✓ Dumps can be restored successfully
 
 #### Exclusion Logic Tests
@@ -212,8 +202,7 @@ export DBDUMP_MYSQL_PWD=testpass123
 # Check for triggers
 grep -i "CREATE TRIGGER" test_dump.sql
 
-# Check for procedures
-grep -i "CREATE PROCEDURE" test_dump.sql
+# Procedures are currently not included by the dump path
 
 # Count trigger occurrences (should be 1)
 grep -c "after_order_insert" test_dump.sql
@@ -382,7 +371,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.23'
+          go-version: '1.24'
       
       - name: Build
         run: go build -o bin/dbdump ./cmd/dbdump

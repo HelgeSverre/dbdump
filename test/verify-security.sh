@@ -128,15 +128,15 @@ if command -v docker &>/dev/null && docker compose ps 2>/dev/null | grep -q "mys
         log_pass "Password NOT visible in dbdump or mysqldump processes"
     fi
     
-    # Verify MYSQL_PWD is set in child environment (positive test)
-    log_test "Test 3b: MYSQL_PWD environment variable is set for mysqldump"
+    # Positive test: dump succeeds with password sourced via env and handed off securely
+    log_test "Test 3b: mysqldump authentication handoff works"
     # We can't easily check child process env, but we can verify the dump works
     wait $DUMP_PID
     
     if [ -f /tmp/test_security_dump3.sql ] && [ -s /tmp/test_security_dump3.sql ]; then
-        log_pass "Dump completed successfully (MYSQL_PWD was passed correctly)"
+        log_pass "Dump completed successfully with secure mysqldump auth handoff"
     else
-        log_fail "Dump failed (MYSQL_PWD may not have been passed)"
+        log_fail "Dump failed (mysqldump auth handoff may be broken)"
     fi
     
     unset DBDUMP_MYSQL_PWD
@@ -192,20 +192,20 @@ log_test "Test 5: Verify -p flag does NOT pass password to mysqldump"
 
 # This is more of a code inspection test
 if grep -q '"-p' "$PROJECT_ROOT/internal/database/dumper.go"; then
-    log_fail "Found '-p' password flag in dumper.go (should use MYSQL_PWD)"
+    log_fail "Found '-p' password flag in dumper.go (should use defaults-extra-file)"
 else
     log_pass "No '-p' password flag found in dumper.go (correct)"
 fi
 
 ##
-## Test 6: MYSQL_PWD environment variable is used in subprocess
+## Test 6: defaults-extra-file is used in subprocess
 ##
-log_test "Test 6: Code sets MYSQL_PWD for mysqldump subprocess"
+log_test "Test 6: Code uses defaults-extra-file for mysqldump subprocess"
 
-if grep -q 'MYSQL_PWD' "$PROJECT_ROOT/internal/database/dumper.go"; then
-    log_pass "Code sets MYSQL_PWD environment variable"
+if grep -q 'defaults-extra-file' "$PROJECT_ROOT/internal/database/dumper.go"; then
+    log_pass "Code uses temporary defaults-extra-file auth"
 else
-    log_fail "Code does not set MYSQL_PWD (password may not be passed securely)"
+    log_fail "Code does not use defaults-extra-file (password may not be passed securely)"
 fi
 
 ##
@@ -226,7 +226,7 @@ if [ $FAILED -eq 0 ]; then
     echo "Summary:"
     echo "  ✓ Passwords hidden from process lists"
     echo "  ✓ Passwords not passed via command-line arguments"
-    echo "  ✓ MYSQL_PWD environment variable used correctly"
+    echo "  ✓ Temporary defaults-extra-file used correctly"
     echo "  ✓ Dump files created with restrictive permissions (0600)"
     echo ""
     exit 0

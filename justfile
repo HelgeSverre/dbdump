@@ -119,10 +119,9 @@ test-data-all: test-docker-up
 
 [group('test')]
 [doc('Quick integration test (small data, MySQL 8.0 only)')]
-test-integration-quick: build test-docker-up test-data-small
+test-integration-quick: build
     @echo "Running quick integration test..."
     @TEST_QUICK=1 ./test/integration-test.sh
-    @just test-docker-down
 
 [group('test')]
 [doc('Full integration test (all databases)')]
@@ -175,28 +174,29 @@ check: fmt vet test
 # === Benchmarking ===
 
 [group('bench')]
-[doc('Run benchmark (default: example_db, 3 iterations)')]
-bench db="example_db" iter="3": build
+[doc('Run benchmark (default: testdb, 3 iterations)')]
+bench db="testdb" iter="3": build
     @./scripts/benchmark.sh {{db}} {{iter}}
 
 [group('bench')]
 [doc('Quick benchmark (1 iteration)')]
-bench-quick db="example_db": build
+bench-quick db="testdb": build
     @./scripts/benchmark.sh {{db}} 1
 
 [group('bench')]
-[doc('Benchmark all available databases')]
+[doc('Benchmark the local test databases')]
 bench-all: build
-    @echo "Running benchmarks on all available databases..."
-    @./scripts/benchmark.sh example_db 3
-    @./scripts/benchmark.sh example_db_2 3
-    @./scripts/benchmark.sh example_db_3 3
+    @echo "Running benchmarks on all local test databases..."
+    @MYSQL_PORT=3307 ./scripts/benchmark.sh testdb 3
+    @MYSQL_PORT=3308 ./scripts/benchmark.sh testdb 3
+    @MYSQL_PORT=3309 ./scripts/benchmark.sh testdb 3
+    @MYSQL_PORT=3310 ./scripts/benchmark.sh testdb 3
 
 [group('bench')]
 [doc('Compare benchmarks before and after changes')]
 bench-compare:
-    @echo "Run this to create baseline: just bench example_db 5"
-    @echo "Then make your changes and run: just bench example_db 5"
+    @echo "Run this to create baseline: just bench testdb 5"
+    @echo "Then make your changes and run: just bench testdb 5"
     @echo "Results will be in benchmark-results/ directory"
 
 # === Development ===
@@ -216,17 +216,17 @@ dev *args:
 [group('examples')]
 [doc('Example: list tables')]
 example-list: build
-    ./{{build_dir}}/{{binary_name}} list -h localhost -u root -d mydb
+    ./{{build_dir}}/{{binary_name}} list -H localhost -u root -d mydb
 
 [group('examples')]
 [doc('Example: dump database')]
 example-dump: build
-    ./{{build_dir}}/{{binary_name}} dump -h localhost -u root -d mydb
+    ./{{build_dir}}/{{binary_name}} dump -H localhost -u root -d mydb
 
 [group('examples')]
 [doc('Example: dry run')]
 example-dry-run: build
-    ./{{build_dir}}/{{binary_name}} dump -h localhost -u root -d mydb --dry-run
+    ./{{build_dir}}/{{binary_name}} dump -H localhost -u root -d mydb --dry-run
 
 # === Release ===
 

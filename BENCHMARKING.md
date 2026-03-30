@@ -5,7 +5,7 @@ This document explains how to run performance benchmarks for dbdump.
 ## Quick Start
 
 ```bash
-# Run default benchmark (example_db, 3 iterations)
+# Run default benchmark (testdb, 3 iterations)
 just bench
 
 # Quick single-iteration benchmark
@@ -14,7 +14,7 @@ just bench-quick
 # Benchmark specific database with custom iterations
 just bench mydb 5
 
-# Run benchmarks on configured test databases (example_db, example_db_2, example_db_3)
+# Run benchmarks across the local test databases
 just bench-all
 ```
 
@@ -59,7 +59,7 @@ Before making any changes:
 
 ```bash
 # Create baseline with 5 iterations for statistical confidence
-just bench example_db 5
+just bench testdb 5
 
 # Note the median throughput from the output
 # Example: Median throughput: 115.23 MB/s
@@ -76,7 +76,7 @@ Edit code, apply optimizations, etc.
 just build
 
 # Run benchmark again
-just bench example_db 5
+just bench testdb 5
 
 # Compare median throughput to baseline
 # Calculate improvement: ((new - old) / old) * 100
@@ -89,8 +89,8 @@ just bench example_db 5
 ls -lt benchmark-results/ | head -5
 
 # Compare two specific runs
-diff benchmark-results/benchmark_example_db_20251021_120000_summary.txt \
-     benchmark-results/benchmark_example_db_20251021_130000_summary.txt
+diff benchmark-results/benchmark_testdb_20251021_120000_summary.txt \
+     benchmark-results/benchmark_testdb_20251021_130000_summary.txt
 ```
 
 ## Performance Targets
@@ -121,7 +121,7 @@ A performance regression is indicated if:
 go build -o bin/dbdump ./cmd/dbdump
 
 # Run with memory profiling
-GODEBUG=gctrace=1 ./bin/dbdump dump -H 127.0.0.1 -u root -d example_db --auto
+GODEBUG=gctrace=1 ./bin/dbdump dump -H 127.0.0.1 -u root -d testdb --auto
 
 # Analyze memory profile (if instrumented)
 go tool pprof bin/dbdump mem.prof
@@ -140,7 +140,7 @@ defer pprof.StopCPUProfile()
 
 # Rebuild and run
 just build
-./bin/dbdump dump -H 127.0.0.1 -u root -d example_db --auto
+./bin/dbdump dump -H 127.0.0.1 -u root -d testdb --auto
 
 # Analyze
 go tool pprof bin/dbdump cpu.prof
@@ -157,12 +157,12 @@ mysqldump --verbose \
   --max-allowed-packet=1G \
   --net-buffer-length=1M \
   --skip-comments \
-  --no-data example_db \
+  --no-data testdb \
   > /dev/null 2>&1
 
 # Time each phase separately
-time mysqldump --no-data example_db > structure.sql
-time mysqldump --no-create-info example_db > data.sql
+time mysqldump --no-data testdb > structure.sql
+time mysqldump --no-create-info testdb > data.sql
 ```
 
 ## Environment Variables
@@ -172,6 +172,9 @@ Control benchmark behavior with environment variables:
 ```bash
 # Use different MySQL host
 MYSQL_HOST=prod.example.com just bench
+
+# Use a different port
+MYSQL_PORT=3307 just bench testdb 3
 
 # Use different credentials
 MYSQL_USER=readonly MYSQL_PASSWORD=secret just bench
@@ -213,7 +216,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: '1.23'
+          go-version: '1.24'
 
       - name: Load test database
         run: |
@@ -341,7 +344,7 @@ If results vary wildly between runs:
 mysql -u root -e "SHOW DATABASES"
 
 # Verify database exists
-mysql -u root -e "USE example_db; SELECT COUNT(*) FROM information_schema.tables"
+mysql -u root -e "USE testdb; SELECT COUNT(*) FROM information_schema.tables"
 ```
 
 ## Best Practices
@@ -357,7 +360,7 @@ mysql -u root -e "USE example_db; SELECT COUNT(*) FROM information_schema.tables
 
 ```bash
 # 1. Create baseline before optimization
-just bench example_db 5
+just bench testdb 5
 # Note median: 115.23 MB/s
 
 # 2. Make optimization (increase buffer size)
@@ -365,15 +368,15 @@ just bench example_db 5
 
 # 3. Rebuild and test
 just build
-just bench example_db 5
+just bench testdb 5
 # Note median: 125.45 MB/s
 
 # 4. Calculate improvement
 # (125.45 - 115.23) / 115.23 * 100 = 8.87% improvement
 
 # 5. Test on other databases to verify
-just bench example_db_2 3
-just bench example_db_3 3
+MYSQL_PORT=3307 just bench testdb 3
+MYSQL_PORT=3309 just bench testdb 3
 
 # 6. Document in OPTIMIZATION_HISTORY.md
 ```

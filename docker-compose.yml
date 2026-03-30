@@ -14,7 +14,7 @@ services:
       - ./test/init:/docker-entrypoint-initdb.d:ro
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ptest pass123"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ptestpass123"]
       timeout: 5s
       retries: 10
 

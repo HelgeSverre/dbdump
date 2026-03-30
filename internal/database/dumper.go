@@ -8,8 +8,31 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
+	"strings"
+	"sync"
 	"syscall"
 	"time"
+)
+
+var (
+	execCommandContext = exec.CommandContext
+	execCommand        = exec.Command
+	createTempFile     = os.CreateTemp
+	removeFile         = os.Remove
+	renameFile         = os.Rename
+	signalNotify       = signal.NotifyContext
+)
+
+type mysqlDumpFeatureSet struct {
+	ColumnStatistics bool
+	SetGTIDPurged    bool
+}
+
+var (
+	mysqlDumpFeaturesOnce sync.Once
+	mysqlDumpFeatures     mysqlDumpFeatureSet
+	mysqlDumpFeaturesErr  error
 )
 
 // DumpOptions contains options for dumping the database
@@ -17,7 +40,6 @@ type DumpOptions struct {
 	Connection    *Connection
 	ExcludeTables []string
 	OutputFile    string
-	ShowProgress  bool
 	DryRun        bool
 }
 
@@ -41,49 +63,83 @@ type DumpResult struct {
 }
 
 // Dump performs the database dump
-func (d *Dumper) Dump() (*DumpResult, error) {
+func (d *Dumper) Dump() (result *DumpResult, err error) {
 	startTime := time.Now()
 
 	if d.options.DryRun {
 		return d.dryRun()
 	}
 
-	// Create output file with restrictive permissions (owner read/write only)
-	outFile, err := os.OpenFile(d.options.OutputFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
+	if err := validateDumpOutputPath(d.options.OutputFile); err != nil {
+		return nil, err
+	}
+
+	defaultsFile, cleanupDefaults, err := d.createDefaultsExtraFile()
+	if err != nil {
+		return nil, err
+	}
+	defer cleanupDefaults()
+
+	outFile, err := createTempFile(
+		filepath.Dir(d.options.OutputFile),
+		filepath.Base(d.options.OutputFile)+".tmp-*",
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create output file: %w", err)
 	}
+
+	tempPath := outFile.Name()
+	closed := false
 	defer func() {
-		if err := outFile.Close(); err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: failed to close output file: %v\n", err)
+		if !closed {
+			if closeErr := outFile.Close(); closeErr != nil {
+				fmt.Fprintf(os.Stderr, "Warning: failed to close output file: %v\n", closeErr)
+			}
+		}
+		if err != nil {
+			if removeErr := removeFile(tempPath); removeErr != nil && !os.IsNotExist(removeErr) {
+				fmt.Fprintf(os.Stderr, "Warning: failed to remove temporary output file: %v\n", removeErr)
+			}
 		}
 	}()
 
-	// Use 256KB buffer for optimal write performance
+	if err = outFile.Chmod(0600); err != nil {
+		return nil, fmt.Errorf("failed to set output file permissions: %w", err)
+	}
+
 	writer := bufio.NewWriterSize(outFile, 256*1024)
-	defer func() {
-		if err := writer.Flush(); err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: failed to flush writer: %v\n", err)
-		}
-	}()
 
-	// Phase 1: Dump structure for all tables
-	if err := d.dumpStructure(writer); err != nil {
+	if err = d.dumpStructure(writer, defaultsFile); err != nil {
 		return nil, fmt.Errorf("failed to dump structure: %w", err)
 	}
 
-	// Phase 2: Dump data for non-excluded tables
-	if err := d.dumpData(writer); err != nil {
+	if err = d.dumpData(writer, defaultsFile); err != nil {
 		return nil, fmt.Errorf("failed to dump data: %w", err)
 	}
 
-	// Get file size
+	if err = writer.Flush(); err != nil {
+		return nil, fmt.Errorf("failed to flush output: %w", err)
+	}
+
+	if err = outFile.Sync(); err != nil {
+		return nil, fmt.Errorf("failed to sync output file: %w", err)
+	}
+
 	fileInfo, err := outFile.Stat()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get file info: %w", err)
 	}
 
-	result := &DumpResult{
+	if err = outFile.Close(); err != nil {
+		return nil, fmt.Errorf("failed to close output file: %w", err)
+	}
+	closed = true
+
+	if err = replaceOutputFile(tempPath, d.options.OutputFile); err != nil {
+		return nil, fmt.Errorf("failed to move output file into place: %w", err)
+	}
+
+	result = &DumpResult{
 		OutputFile:      d.options.OutputFile,
 		Duration:        time.Since(startTime),
 		ExcludedTables:  d.options.ExcludeTables,
@@ -94,31 +150,75 @@ func (d *Dumper) Dump() (*DumpResult, error) {
 	return result, nil
 }
 
+func validateDumpOutputPath(path string) error {
+	info, err := os.Lstat(path)
+	if err == nil && info.Mode()&os.ModeSymlink != 0 {
+		return fmt.Errorf("refusing to write dump output through symlink: %s", path)
+	}
+	if err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to inspect dump output path: %w", err)
+	}
+
+	return nil
+}
+
+func replaceOutputFile(tempPath, finalPath string) error {
+	if err := renameFile(tempPath, finalPath); err == nil {
+		return nil
+	} else if !os.IsExist(err) {
+		if _, statErr := os.Stat(finalPath); statErr != nil {
+			return err
+		}
+	}
+
+	backupPath := fmt.Sprintf("%s.bak-%d", finalPath, time.Now().UnixNano())
+	if err := renameFile(finalPath, backupPath); err != nil {
+		return err
+	}
+
+	if err := renameFile(tempPath, finalPath); err != nil {
+		restoreErr := renameFile(backupPath, finalPath)
+		if restoreErr != nil {
+			return fmt.Errorf("%w (restore failed: %v)", err, restoreErr)
+		}
+		return err
+	}
+
+	if err := removeFile(backupPath); err != nil && !os.IsNotExist(err) {
+		fmt.Fprintf(os.Stderr, "Warning: failed to remove backup output file: %v\n", err)
+	}
+
+	return nil
+}
+
 // dumpStructure dumps the structure of all tables
-func (d *Dumper) dumpStructure(writer io.Writer) error {
-	// Create context that cancels on Ctrl+C
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+func (d *Dumper) dumpStructure(writer io.Writer, defaultsFile string) error {
+	ctx, stop := signalNotify(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	args := d.buildMySQLDumpArgs()
+	args := d.buildMySQLDumpArgs(defaultsFile)
 	args = append(args,
 		"--no-data",
-		"--triggers",            // Explicitly include triggers
-		"--events",              // Include scheduled events
-		"--set-gtid-purged=OFF", // Cross-version compatibility
-		"--column-statistics=0", // Avoid MySQL 8.0 warnings/errors
-		// Note: --routines disabled due to MySQL 5.7 compatibility issues with INFORMATION_SCHEMA.LIBRARIES
+		"--triggers",
+		"--events",
 	)
+
+	features, err := getMySQLDumpFeatures()
+	if err != nil {
+		return err
+	}
+	if features.SetGTIDPurged {
+		args = append(args, "--set-gtid-purged=OFF")
+	}
+	if features.ColumnStatistics {
+		args = append(args, "--column-statistics=0")
+	}
+
 	args = append(args, d.options.Connection.Database)
 
-	cmd := exec.CommandContext(ctx, "mysqldump", args...)
+	cmd := execCommandContext(ctx, "mysqldump", args...)
 	cmd.Stdout = writer
 	cmd.Stderr = os.Stderr
-
-	// Set MYSQL_PWD environment variable for secure password passing
-	if d.options.Connection.Password != "" {
-		cmd.Env = append(os.Environ(), "MYSQL_PWD="+d.options.Connection.Password)
-	}
 
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("mysqldump structure failed: %w", err)
@@ -128,22 +228,29 @@ func (d *Dumper) dumpStructure(writer io.Writer) error {
 }
 
 // dumpData dumps data for non-excluded tables
-func (d *Dumper) dumpData(writer io.Writer) error {
-	// Create context that cancels on Ctrl+C
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+func (d *Dumper) dumpData(writer io.Writer, defaultsFile string) error {
+	ctx, stop := signalNotify(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	args := d.buildMySQLDumpArgs()
+	args := d.buildMySQLDumpArgs(defaultsFile)
 	args = append(args,
 		"--no-create-info",
-		"--skip-triggers",       // Prevent duplicate triggers
-		"--skip-routines",       // Prevent duplicate routines
-		"--skip-events",         // Prevent duplicate events
-		"--set-gtid-purged=OFF", // Cross-version compatibility
-		"--column-statistics=0", // Avoid MySQL 8.0 warnings/errors
+		"--skip-triggers",
+		"--skip-routines",
+		"--skip-events",
 	)
 
-	// Add ignore-table flags for excluded tables
+	features, err := getMySQLDumpFeatures()
+	if err != nil {
+		return err
+	}
+	if features.SetGTIDPurged {
+		args = append(args, "--set-gtid-purged=OFF")
+	}
+	if features.ColumnStatistics {
+		args = append(args, "--column-statistics=0")
+	}
+
 	for _, table := range d.options.ExcludeTables {
 		args = append(args, fmt.Sprintf("--ignore-table=%s.%s",
 			d.options.Connection.Database, table))
@@ -151,14 +258,9 @@ func (d *Dumper) dumpData(writer io.Writer) error {
 
 	args = append(args, d.options.Connection.Database)
 
-	cmd := exec.CommandContext(ctx, "mysqldump", args...)
+	cmd := execCommandContext(ctx, "mysqldump", args...)
 	cmd.Stdout = writer
 	cmd.Stderr = os.Stderr
-
-	// Set MYSQL_PWD environment variable for secure password passing
-	if d.options.Connection.Password != "" {
-		cmd.Env = append(os.Environ(), "MYSQL_PWD="+d.options.Connection.Password)
-	}
 
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("mysqldump data failed: %w", err)
@@ -167,31 +269,99 @@ func (d *Dumper) dumpData(writer io.Writer) error {
 	return nil
 }
 
-// buildMySQLDumpArgs builds common mysqldump arguments
-// Note: Password is NOT included here - it's passed via MYSQL_PWD environment variable
-func (d *Dumper) buildMySQLDumpArgs() []string {
-	args := []string{
+// buildMySQLDumpArgs builds common mysqldump arguments.
+func (d *Dumper) buildMySQLDumpArgs(defaultsFile ...string) []string {
+	args := []string{}
+	if len(defaultsFile) > 0 && defaultsFile[0] != "" {
+		args = append(args, "--defaults-extra-file="+defaultsFile[0])
+	}
+
+	args = append(args,
 		"-h", d.options.Connection.Host,
 		"-P", fmt.Sprintf("%d", d.options.Connection.Port),
 		"-u", d.options.Connection.User,
-	}
-
-	// Add common flags
-	args = append(args,
 		"--single-transaction",
 		"--quick",
 		"--lock-tables=false",
-	)
-
-	// Add performance optimization flags
-	args = append(args,
 		"--max-allowed-packet=1G",
 		"--net-buffer-length=1M",
 		"--skip-comments",
-		"--hex-blob", // Handle binary columns safely
+		"--hex-blob",
 	)
 
 	return args
+}
+
+func (d *Dumper) createDefaultsExtraFile() (string, func(), error) {
+	if d.options.Connection.Password == "" {
+		return "", func() {}, nil
+	}
+
+	file, err := createTempFile("", "dbdump-mysql-*.cnf")
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to create mysqldump defaults file: %w", err)
+	}
+
+	path := file.Name()
+	cleanup := func() {
+		if err := removeFile(path); err != nil && !os.IsNotExist(err) {
+			fmt.Fprintf(os.Stderr, "Warning: failed to remove mysqldump defaults file: %v\n", err)
+		}
+	}
+
+	if err := file.Chmod(0600); err != nil {
+		_ = file.Close()
+		cleanup()
+		return "", nil, fmt.Errorf("failed to secure mysqldump defaults file: %w", err)
+	}
+
+	content := fmt.Sprintf("[client]\npassword=%s\n", mysqlOptionValue(d.options.Connection.Password))
+	if _, err := io.WriteString(file, content); err != nil {
+		_ = file.Close()
+		cleanup()
+		return "", nil, fmt.Errorf("failed to write mysqldump defaults file: %w", err)
+	}
+
+	if err := file.Close(); err != nil {
+		cleanup()
+		return "", nil, fmt.Errorf("failed to close mysqldump defaults file: %w", err)
+	}
+
+	return path, cleanup, nil
+}
+
+func mysqlOptionValue(value string) string {
+	escaped := strings.NewReplacer(
+		"\\", "\\\\",
+		"\"", "\\\"",
+		"\n", "\\n",
+		"\r", "\\r",
+	).Replace(value)
+	return `"` + escaped + `"`
+}
+
+func getMySQLDumpFeatures() (mysqlDumpFeatureSet, error) {
+	mysqlDumpFeaturesOnce.Do(func() {
+		cmd := execCommand("mysqldump", "--help")
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			return
+		}
+
+		help := string(output)
+		mysqlDumpFeatures = mysqlDumpFeatureSet{
+			ColumnStatistics: strings.Contains(help, "column-statistics"),
+			SetGTIDPurged:    strings.Contains(help, "set-gtid-purged"),
+		}
+	})
+
+	return mysqlDumpFeatures, mysqlDumpFeaturesErr
+}
+
+func resetMySQLDumpFeatures() {
+	mysqlDumpFeaturesOnce = sync.Once{}
+	mysqlDumpFeatures = mysqlDumpFeatureSet{}
+	mysqlDumpFeaturesErr = nil
 }
 
 // dryRun performs a dry run showing what would be dumped
@@ -208,7 +378,7 @@ func (d *Dumper) dryRun() (*DumpResult, error) {
 
 // CheckMySQLDump verifies that mysqldump is available
 func CheckMySQLDump() error {
-	cmd := exec.Command("mysqldump", "--version")
+	cmd := execCommand("mysqldump", "--version")
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("mysqldump not found in PATH: %w", err)
 	}

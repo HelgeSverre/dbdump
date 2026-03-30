@@ -19,10 +19,14 @@ NC='\033[0m' # No Color
 TESTS_RUN=0
 TESTS_PASSED=0
 TESTS_FAILED=0
+STARTED_LOCAL_DOCKER=0
 
 # Database configurations (bash 3.2 compatible)
-DB_NAMES=("mysql57" "mysql80" "mysql84" "mariadb")
-DB_PORTS=("3307" "3308" "3309" "3310")
+if [ -n "${TEST_QUICK:-}" ]; then
+    DB_NAMES=("mysql80")
+else
+    DB_NAMES=("mysql57" "mysql80" "mysql84" "mariadb")
+fi
 
 # Helper function to get port for a database name
 get_db_port() {
@@ -47,6 +51,15 @@ log_warn() {
 log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
+
+cleanup() {
+    rm -f /tmp/test_*.sql /tmp/custom_dump.sql
+    if [ "$STARTED_LOCAL_DOCKER" -eq 1 ]; then
+        docker compose down >/dev/null 2>&1 || true
+    fi
+}
+
+trap cleanup EXIT
 
 run_test() {
     local test_name="$1"
@@ -135,7 +148,7 @@ test_data_integrity() {
         grep -q 'CREATE.*TRIGGER.*after_order_insert' /tmp/test_triggers.sql
     "
     
-    # Test 5: Stored procedures included
+    # Test 5: Stored procedures are not currently dumped
     # NOTE: Disabled due to MySQL 5.7 compatibility issue with INFORMATION_SCHEMA.LIBRARIES
     # when using newer mysqldump clients (MySQL 8.0+)
     # run_test "Stored procedures in dump" "
@@ -157,6 +170,10 @@ test_data_integrity() {
         ./bin/dbdump dump -H 127.0.0.1 -P $port -u root -d testdb --auto -o /tmp/test_restore.sql
         mysql -h 127.0.0.1 -P $port -u root -ptestpass123 -e 'CREATE DATABASE IF NOT EXISTS testdb_restore;'
         mysql -h 127.0.0.1 -P $port -u root -ptestpass123 testdb_restore < /tmp/test_restore.sql
+        users_count=\$(mysql -h 127.0.0.1 -P $port -u root -ptestpass123 -N -e 'SELECT COUNT(*) FROM testdb_restore.users;')
+        audits_count=\$(mysql -h 127.0.0.1 -P $port -u root -ptestpass123 -N -e 'SELECT COUNT(*) FROM testdb_restore.audits;')
+        [ \"\$users_count\" -gt 0 ]
+        [ \"\$audits_count\" -eq 0 ]
         mysql -h 127.0.0.1 -P $port -u root -ptestpass123 -e 'DROP DATABASE testdb_restore;'
     "
 }
@@ -227,16 +244,24 @@ log_info "Building dbdump..."
 go build -o bin/dbdump ./cmd/dbdump || { log_error "Build failed"; exit 1; }
 
 # Start Docker Compose (skip in CI as services are already running)
-if [ -z "${CI}" ]; then
-    log_info "Starting Docker Compose..."
-    docker compose up -d
-    echo ""
+if [ -z "${CI:-}" ]; then
+    if [ -n "${TEST_QUICK:-}" ]; then
+        log_info "Starting Docker Compose for quick integration test..."
+        STARTED_LOCAL_DOCKER=1
+        docker compose up -d mysql80
+        echo ""
+        wait_for_db mysql80 3308 || exit 1
+    else
+        log_info "Starting Docker Compose..."
+        docker compose up -d
+        echo ""
 
-    # Wait for all databases
-    for db_name in "${DB_NAMES[@]}"; do
-        db_port=$(get_db_port "$db_name")
-        wait_for_db "$db_name" "$db_port" || exit 1
-    done
+        # Wait for all databases
+        for db_name in "${DB_NAMES[@]}"; do
+            db_port=$(get_db_port "$db_name")
+            wait_for_db "$db_name" "$db_port" || exit 1
+        done
+    fi
 else
     log_info "Running in CI - using existing service containers"
     echo ""
@@ -275,10 +300,7 @@ for db_name in "${DB_NAMES[@]}"; do
     echo ""
 done
 
-# Cleanup
-log_info "Cleaning up test files..."
-rm -f /tmp/test_*.sql /tmp/custom_dump.sql
-
+# Cleanup is handled by trap
 echo ""
 echo "========================================"
 echo "Test Results"
@@ -292,7 +314,7 @@ echo ""
 if [ $TESTS_FAILED -eq 0 ]; then
     log_info "All tests passed! ✓"
     echo ""
-    if [ -z "${CI}" ]; then
+    if [ -z "${CI:-}" ]; then
         echo "To stop Docker containers: docker compose down"
         echo "To cleanup volumes: docker compose down -v"
     fi
@@ -300,7 +322,7 @@ if [ $TESTS_FAILED -eq 0 ]; then
 else
     log_error "Some tests failed!"
     echo ""
-    if [ -z "${CI}" ]; then
+    if [ -z "${CI:-}" ]; then
         echo "To view logs: docker compose logs [mysql57|mysql80|mysql84|mariadb]"
         echo "To stop: docker compose down"
     fi

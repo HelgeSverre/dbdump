@@ -25,7 +25,7 @@ const defaultConfigYAML = `default_excludes:
   patterns:
     - "telescope_*"
     - "pulse_*"
-    - "_cache"
+    - "*_cache"
 `
 
 // ExcludeConfig represents the exclude configuration
@@ -90,14 +90,14 @@ func MergeExcludes(defaults *DefaultConfig, project *Config) ExcludeConfig {
 	}
 
 	// Remove duplicates
-	merged.Exact = uniqueStrings(merged.Exact)
-	merged.Patterns = uniqueStrings(merged.Patterns)
+	merged.Exact = UniqueStrings(merged.Exact)
+	merged.Patterns = UniqueStrings(merged.Patterns)
 
 	return merged
 }
 
-// uniqueStrings removes duplicate strings from a slice
-func uniqueStrings(input []string) []string {
+// UniqueStrings removes duplicate strings from a slice while preserving order.
+func UniqueStrings(input []string) []string {
 	seen := make(map[string]bool)
 	result := make([]string, 0)
 

@@ -29,7 +29,7 @@ cache records. These tables can make dumps take hours and consume gigabytes of s
 
 ### Using Go
 
-If you have Go 1.23+ installed:
+If you have Go 1.24+ installed:
 
 ```bash
 go install github.com/helgesverre/dbdump/cmd/dbdump@latest
@@ -37,47 +37,47 @@ go install github.com/helgesverre/dbdump/cmd/dbdump@latest
 
 ### Pre-built Binaries
 
-Download the latest release for your platform from the [releases page](https://github.com/helgesverre/dbdump/releases).
+Download the matching versioned asset from the [releases page](https://github.com/helgesverre/dbdump/releases). Asset names include the tag, for example `dbdump-v1.1.1-darwin-arm64.tar.gz`.
 
 #### macOS (Apple Silicon)
 
 ```bash
-curl -LO https://github.com/helgesverre/dbdump/releases/latest/download/dbdump-darwin-arm64.tar.gz
-tar -xzf dbdump-darwin-arm64.tar.gz
-chmod +x dbdump-darwin-arm64
-sudo mv dbdump-darwin-arm64 /usr/local/bin/dbdump
+curl -LO https://github.com/helgesverre/dbdump/releases/download/vX.Y.Z/dbdump-vX.Y.Z-darwin-arm64.tar.gz
+tar -xzf dbdump-vX.Y.Z-darwin-arm64.tar.gz
+chmod +x dbdump-vX.Y.Z-darwin-arm64
+sudo mv dbdump-vX.Y.Z-darwin-arm64 /usr/local/bin/dbdump
 ```
 
 #### macOS (Intel)
 
 ```bash
-curl -LO https://github.com/helgesverre/dbdump/releases/latest/download/dbdump-darwin-amd64.tar.gz
-tar -xzf dbdump-darwin-amd64.tar.gz
-chmod +x dbdump-darwin-amd64
-sudo mv dbdump-darwin-amd64 /usr/local/bin/dbdump
+curl -LO https://github.com/helgesverre/dbdump/releases/download/vX.Y.Z/dbdump-vX.Y.Z-darwin-amd64.tar.gz
+tar -xzf dbdump-vX.Y.Z-darwin-amd64.tar.gz
+chmod +x dbdump-vX.Y.Z-darwin-amd64
+sudo mv dbdump-vX.Y.Z-darwin-amd64 /usr/local/bin/dbdump
 ```
 
 #### Linux (AMD64)
 
 ```bash
-curl -LO https://github.com/helgesverre/dbdump/releases/latest/download/dbdump-linux-amd64.tar.gz
-tar -xzf dbdump-linux-amd64.tar.gz
-chmod +x dbdump-linux-amd64
-sudo mv dbdump-linux-amd64 /usr/local/bin/dbdump
+curl -LO https://github.com/helgesverre/dbdump/releases/download/vX.Y.Z/dbdump-vX.Y.Z-linux-amd64.tar.gz
+tar -xzf dbdump-vX.Y.Z-linux-amd64.tar.gz
+chmod +x dbdump-vX.Y.Z-linux-amd64
+sudo mv dbdump-vX.Y.Z-linux-amd64 /usr/local/bin/dbdump
 ```
 
 #### Linux (ARM64)
 
 ```bash
-curl -LO https://github.com/helgesverre/dbdump/releases/latest/download/dbdump-linux-arm64.tar.gz
-tar -xzf dbdump-linux-arm64.tar.gz
-chmod +x dbdump-linux-arm64
-sudo mv dbdump-linux-arm64 /usr/local/bin/dbdump
+curl -LO https://github.com/helgesverre/dbdump/releases/download/vX.Y.Z/dbdump-vX.Y.Z-linux-arm64.tar.gz
+tar -xzf dbdump-vX.Y.Z-linux-arm64.tar.gz
+chmod +x dbdump-vX.Y.Z-linux-arm64
+sudo mv dbdump-vX.Y.Z-linux-arm64 /usr/local/bin/dbdump
 ```
 
 #### Windows (AMD64)
 
-Download `dbdump-windows-amd64.zip` from the [releases page](https://github.com/helgesverre/dbdump/releases), extract it, and add the executable to your PATH.
+Download the versioned Windows asset from the [releases page](https://github.com/helgesverre/dbdump/releases), extract it, and add the executable to your PATH.
 
 #### Verify Installation
 
@@ -100,7 +100,7 @@ cd dbdump
 just install
 ```
 
-Requires Go 1.23+ and [just](https://github.com/casey/just).
+Requires Go 1.24+ and [just](https://github.com/casey/just).
 
 ## Quick Start
 
@@ -109,10 +109,10 @@ Requires Go 1.23+ and [just](https://github.com/casey/just).
 ```bash
 # Recommended: Use environment variable for password
 export DBDUMP_MYSQL_PWD=yourpassword
-dbdump dump -h localhost -u root -d mydb
+dbdump dump -H localhost -u root -d mydb
 
 # Or provide password as flag (less secure)
-dbdump dump -h localhost -u root -p password -d mydb
+dbdump dump -H localhost -u root -p password -d mydb
 ```
 
 This will:
@@ -126,7 +126,7 @@ This will:
 ### Auto Mode (Non-Interactive)
 
 ```bash
-dbdump dump -h localhost -u root -d mydb --auto
+dbdump dump -H localhost -u root -d mydb --auto
 ```
 
 Uses smart defaults without interaction.
@@ -134,7 +134,7 @@ Uses smart defaults without interaction.
 ### With Config File
 
 ```bash
-dbdump dump -h localhost -u root -d mydb --config ./project.yaml
+dbdump dump -H localhost -u root -d mydb --config ./project.yaml
 ```
 
 ## Usage
@@ -146,16 +146,16 @@ dbdump dump -h localhost -u root -d mydb --config ./project.yaml
 export DBDUMP_MYSQL_PWD=yourpassword
 
 # Dump database (interactive)
-dbdump dump -h localhost -u root -d mydb
+dbdump dump -H localhost -u root -d mydb
 
 # List tables with sizes
-dbdump list -h localhost -u root -d mydb
+dbdump list -H localhost -u root -d mydb
 
 # Dry run (see what would be excluded)
-dbdump dump -h localhost -u root -d mydb --dry-run
+dbdump dump -H localhost -u root -d mydb --dry-run
 
 # Dump with custom output file
-dbdump dump -h localhost -u root -d mydb -o backup.sql
+dbdump dump -H localhost -u root -d mydb -o backup.sql
 ```
 
 ### Connection Options
@@ -176,7 +176,6 @@ dbdump dump -h localhost -u root -d mydb -o backup.sql
     --exclude          Exclude specific table data (repeatable)
     --exclude-pattern  Exclude tables matching pattern (repeatable)
     --auto             Use smart defaults without interaction
-    --no-progress      Disable progress indicator
     --dry-run          Show what would be dumped without dumping
 ```
 
@@ -185,19 +184,19 @@ dbdump dump -h localhost -u root -d mydb -o backup.sql
 ```bash
 # Use environment variable for password
 export DBDUMP_MYSQL_PWD=secret
-dbdump dump -h prod.example.com -u readonly -d myapp_prod
+dbdump dump -H prod.example.com -u readonly -d myapp_prod
 
 # Exclude specific tables
-dbdump dump -h localhost -u root -d mydb \
+dbdump dump -H localhost -u root -d mydb \
   --exclude audits \
   --exclude activity_logs \
   --exclude-pattern "temp_*"
 
 # With project config
-dbdump dump -h localhost -u root -d mydb --config ./myproject.yaml
+dbdump dump -H localhost -u root -d mydb --config ./myproject.yaml
 
 # Auto mode with custom output
-dbdump dump -h localhost -u root -d mydb --auto -o daily-backup.sql
+dbdump dump -H localhost -u root -d mydb --auto -o daily-backup.sql
 ```
 
 ## Configuration
@@ -248,7 +247,7 @@ exclude:
 Use it with:
 
 ```bash
-dbdump dump -h localhost -u root -d mydb --config ./project.yaml
+dbdump dump -H localhost -u root -d mydb --config ./project.yaml
 ```
 
 ### Default Exclusions
@@ -273,9 +272,9 @@ dbdump includes smart defaults for common Laravel tables:
 
 - `telescope_*`
 - `pulse_*`
-- `_cache`
+- `*_cache`
 
-These defaults are always applied and can be extended with project configs or CLI flags.
+These defaults are always applied. Later layers can add more excludes, but they do not remove the built-ins.
 
 ## How It Works
 
@@ -351,13 +350,7 @@ just fmt
 #### Integration Tests
 
 ```bash
-# Start test databases (MySQL 5.7, 8.0, 8.4, MariaDB)
-docker compose up -d
-
-# Generate sample data
-./test/generate-sample-data.sh medium 127.0.0.1 3308 testdb
-
-# Run full integration test suite
+# Run the full integration test suite (starts Docker Compose locally)
 ./test/integration-test.sh
 
 # Cleanup
@@ -377,9 +370,8 @@ ps aux | grep dbdump  # Should NOT show password
 # Verify file permissions (should be 0600)
 ls -la testdb_*.sql
 
-# Test data integrity (triggers, procedures)
+# Test data integrity (triggers only; routines are currently disabled)
 grep -i "CREATE TRIGGER" testdb_*.sql
-grep -i "CREATE PROCEDURE" testdb_*.sql
 ```
 
 ### Project Structure
@@ -391,8 +383,8 @@ dump-tool/
 │   ├── config/          # Configuration management
 │   ├── database/        # Database operations
 │   ├── patterns/        # Pattern matching
-│   └── ui/              # Interactive UI and progress
-├── configs/             # Default configurations
+│   └── ui/              # Interactive UI
+├── configs/             # Example configurations
 └── justfile             # Build commands
 ```
 
@@ -412,7 +404,6 @@ MIT License - see LICENSE file for details
 
 - Built with [Cobra](https://github.com/spf13/cobra) for CLI
 - Interactive UI using [Bubble Tea](https://github.com/charmbracelet/bubbletea)
-- Progress bars by [progressbar](https://github.com/schollz/progressbar)
 
 ### Branding
 

@@ -93,14 +93,14 @@ Add to README.md:
 
 Small dataset (~10MB) generated on each database with:
 - Users, Products, Orders, Order Items tables
-- Triggers and stored procedures
+- Triggers and a stored-procedure fixture (routines are not currently dumped)
 - "Noisy" tables for exclusion testing
 
 ### Test Coverage
 
 **52 total tests** (13 per database):
 - Security (password hiding, file permissions)
-- Data integrity (triggers, procedures, restoration)
+- Data integrity (triggers, restoration, and routine-fixture compatibility)
 - Exclusion logic (structure preserved, data excluded)
 - CLI features (list, dry-run, custom output)
 

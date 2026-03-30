@@ -95,8 +95,8 @@
                         <h3>Run the dump</h3>
                         <p>Use <code>--auto</code> for smart defaults, or omit it for interactive mode:</p>
                         <div class="code-block">
-                            <pre><code>dbdump dump -h localhost -u root -d mydb --auto</code></pre>
-                            <button class="copy-btn" data-copy="dbdump dump -h localhost -u root -d mydb --auto">Copy</button>
+                            <pre><code>dbdump dump -H localhost -u root -d mydb --auto</code></pre>
+                            <button class="copy-btn" data-copy="dbdump dump -H localhost -u root -d mydb --auto">Copy</button>
                         </div>
                     </div>
                 </div>
@@ -110,7 +110,7 @@
             <h2>Installation</h2>
 
             <h3>Using Go</h3>
-            <p>If you have Go 1.23+ installed:</p>
+            <p>If you have Go 1.24+ installed:</p>
             <div class="code-block">
                 <pre><code>go install github.com/helgesverre/dbdump/cmd/dbdump@latest</code></pre>
                 <button class="copy-btn" data-copy="go install github.com/helgesverre/dbdump/cmd/dbdump@latest">Copy</button>
@@ -130,63 +130,63 @@
             <div class="platform-content">
                 <div id="mac-arm" class="platform-instructions active">
                     <div class="code-block">
-                        <pre><code>curl -LO https://github.com/helgesverre/dbdump/releases/latest/download/dbdump-darwin-arm64.tar.gz
-tar -xzf dbdump-darwin-arm64.tar.gz
-chmod +x dbdump-darwin-arm64
-sudo mv dbdump-darwin-arm64 /usr/local/bin/dbdump</code></pre>
-                        <button class="copy-btn" data-copy="curl -LO https://github.com/helgesverre/dbdump/releases/latest/download/dbdump-darwin-arm64.tar.gz
-tar -xzf dbdump-darwin-arm64.tar.gz
-chmod +x dbdump-darwin-arm64
-sudo mv dbdump-darwin-arm64 /usr/local/bin/dbdump">Copy</button>
+                        <pre><code>curl -LO https://github.com/helgesverre/dbdump/releases/download/vX.Y.Z/dbdump-vX.Y.Z-darwin-arm64.tar.gz
+tar -xzf dbdump-vX.Y.Z-darwin-arm64.tar.gz
+chmod +x dbdump-vX.Y.Z-darwin-arm64
+sudo mv dbdump-vX.Y.Z-darwin-arm64 /usr/local/bin/dbdump</code></pre>
+                        <button class="copy-btn" data-copy="curl -LO https://github.com/helgesverre/dbdump/releases/download/vX.Y.Z/dbdump-vX.Y.Z-darwin-arm64.tar.gz
+tar -xzf dbdump-vX.Y.Z-darwin-arm64.tar.gz
+chmod +x dbdump-vX.Y.Z-darwin-arm64
+sudo mv dbdump-vX.Y.Z-darwin-arm64 /usr/local/bin/dbdump">Copy</button>
                     </div>
                 </div>
                 <div id="mac-intel" class="platform-instructions">
                     <div class="code-block">
-                        <pre><code>curl -LO https://github.com/helgesverre/dbdump/releases/latest/download/dbdump-darwin-amd64.tar.gz
-tar -xzf dbdump-darwin-amd64.tar.gz
-chmod +x dbdump-darwin-amd64
-sudo mv dbdump-darwin-amd64 /usr/local/bin/dbdump</code></pre>
-                        <button class="copy-btn" data-copy="curl -LO https://github.com/helgesverre/dbdump/releases/latest/download/dbdump-darwin-amd64.tar.gz
-tar -xzf dbdump-darwin-amd64.tar.gz
-chmod +x dbdump-darwin-amd64
-sudo mv dbdump-darwin-amd64 /usr/local/bin/dbdump">Copy</button>
+                        <pre><code>curl -LO https://github.com/helgesverre/dbdump/releases/download/vX.Y.Z/dbdump-vX.Y.Z-darwin-amd64.tar.gz
+tar -xzf dbdump-vX.Y.Z-darwin-amd64.tar.gz
+chmod +x dbdump-vX.Y.Z-darwin-amd64
+sudo mv dbdump-vX.Y.Z-darwin-amd64 /usr/local/bin/dbdump</code></pre>
+                        <button class="copy-btn" data-copy="curl -LO https://github.com/helgesverre/dbdump/releases/download/vX.Y.Z/dbdump-vX.Y.Z-darwin-amd64.tar.gz
+tar -xzf dbdump-vX.Y.Z-darwin-amd64.tar.gz
+chmod +x dbdump-vX.Y.Z-darwin-amd64
+sudo mv dbdump-vX.Y.Z-darwin-amd64 /usr/local/bin/dbdump">Copy</button>
                     </div>
                 </div>
                 <div id="linux-amd" class="platform-instructions">
                     <div class="code-block">
-                        <pre><code>curl -LO https://github.com/helgesverre/dbdump/releases/latest/download/dbdump-linux-amd64.tar.gz
-tar -xzf dbdump-linux-amd64.tar.gz
-chmod +x dbdump-linux-amd64
-sudo mv dbdump-linux-amd64 /usr/local/bin/dbdump</code></pre>
-                        <button class="copy-btn" data-copy="curl -LO https://github.com/helgesverre/dbdump/releases/latest/download/dbdump-linux-amd64.tar.gz
-tar -xzf dbdump-linux-amd64.tar.gz
-chmod +x dbdump-linux-amd64
-sudo mv dbdump-linux-amd64 /usr/local/bin/dbdump">Copy</button>
+                        <pre><code>curl -LO https://github.com/helgesverre/dbdump/releases/download/vX.Y.Z/dbdump-vX.Y.Z-linux-amd64.tar.gz
+tar -xzf dbdump-vX.Y.Z-linux-amd64.tar.gz
+chmod +x dbdump-vX.Y.Z-linux-amd64
+sudo mv dbdump-vX.Y.Z-linux-amd64 /usr/local/bin/dbdump</code></pre>
+                        <button class="copy-btn" data-copy="curl -LO https://github.com/helgesverre/dbdump/releases/download/vX.Y.Z/dbdump-vX.Y.Z-linux-amd64.tar.gz
+tar -xzf dbdump-vX.Y.Z-linux-amd64.tar.gz
+chmod +x dbdump-vX.Y.Z-linux-amd64
+sudo mv dbdump-vX.Y.Z-linux-amd64 /usr/local/bin/dbdump">Copy</button>
                     </div>
                 </div>
                 <div id="linux-arm" class="platform-instructions">
                     <div class="code-block">
-                        <pre><code>curl -LO https://github.com/helgesverre/dbdump/releases/latest/download/dbdump-linux-arm64.tar.gz
-tar -xzf dbdump-linux-arm64.tar.gz
-chmod +x dbdump-linux-arm64
-sudo mv dbdump-linux-arm64 /usr/local/bin/dbdump</code></pre>
-                        <button class="copy-btn" data-copy="curl -LO https://github.com/helgesverre/dbdump/releases/latest/download/dbdump-linux-arm64.tar.gz
-tar -xzf dbdump-linux-arm64.tar.gz
-chmod +x dbdump-linux-arm64
-sudo mv dbdump-linux-arm64 /usr/local/bin/dbdump">Copy</button>
+                        <pre><code>curl -LO https://github.com/helgesverre/dbdump/releases/download/vX.Y.Z/dbdump-vX.Y.Z-linux-arm64.tar.gz
+tar -xzf dbdump-vX.Y.Z-linux-arm64.tar.gz
+chmod +x dbdump-vX.Y.Z-linux-arm64
+sudo mv dbdump-vX.Y.Z-linux-arm64 /usr/local/bin/dbdump</code></pre>
+                        <button class="copy-btn" data-copy="curl -LO https://github.com/helgesverre/dbdump/releases/download/vX.Y.Z/dbdump-vX.Y.Z-linux-arm64.tar.gz
+tar -xzf dbdump-vX.Y.Z-linux-arm64.tar.gz
+chmod +x dbdump-vX.Y.Z-linux-arm64
+sudo mv dbdump-vX.Y.Z-linux-arm64 /usr/local/bin/dbdump">Copy</button>
                     </div>
                 </div>
                 <div id="windows" class="platform-instructions">
                     <div class="code-block">
                         <pre><code># Download and extract
-Invoke-WebRequest -Uri https://github.com/helgesverre/dbdump/releases/latest/download/dbdump-windows-amd64.zip -OutFile dbdump.zip
+Invoke-WebRequest -Uri https://github.com/helgesverre/dbdump/releases/download/vX.Y.Z/dbdump-vX.Y.Z-windows-amd64.zip -OutFile dbdump.zip
 Expand-Archive dbdump.zip -DestinationPath $HOME\dbdump -Force
 
 # Add to PATH (run once)
 $env:PATH += ";$HOME\dbdump"
 [Environment]::SetEnvironmentVariable("PATH", $env:PATH + ";$HOME\dbdump", "User")</code></pre>
                         <button class="copy-btn" data-copy="# Download and extract
-Invoke-WebRequest -Uri https://github.com/helgesverre/dbdump/releases/latest/download/dbdump-windows-amd64.zip -OutFile dbdump.zip
+Invoke-WebRequest -Uri https://github.com/helgesverre/dbdump/releases/download/vX.Y.Z/dbdump-vX.Y.Z-windows-amd64.zip -OutFile dbdump.zip
 Expand-Archive dbdump.zip -DestinationPath $HOME\dbdump -Force
 
 # Add to PATH (run once)
@@ -257,24 +257,24 @@ $env:PATH += &quot;;$HOME\dbdump&quot;
                 <p>Create a database dump with smart exclusions.</p>
                 <div class="code-block">
                     <pre><code># Interactive mode (select tables visually)
-dbdump dump -h localhost -u root -d mydb
+dbdump dump -H localhost -u root -d mydb
 
 # Auto mode (use smart defaults)
-dbdump dump -h localhost -u root -d mydb --auto
+dbdump dump -H localhost -u root -d mydb --auto
 
 # Custom output file
-dbdump dump -h localhost -u root -d mydb -o backup.sql
+dbdump dump -H localhost -u root -d mydb -o backup.sql
 
 # Dry run (preview what will be excluded)
-dbdump dump -h localhost -u root -d mydb --dry-run</code></pre>
-                    <button class="copy-btn" data-copy="dbdump dump -h localhost -u root -d mydb --auto">Copy</button>
+dbdump dump -H localhost -u root -d mydb --dry-run</code></pre>
+                    <button class="copy-btn" data-copy="dbdump dump -H localhost -u root -d mydb --auto">Copy</button>
                 </div>
 
                 <h4>list</h4>
                 <p>View all tables with their sizes before dumping.</p>
                 <div class="code-block">
-                    <pre><code>dbdump list -h localhost -u root -d mydb</code></pre>
-                    <button class="copy-btn" data-copy="dbdump list -h localhost -u root -d mydb">Copy</button>
+                    <pre><code>dbdump list -H localhost -u root -d mydb</code></pre>
+                    <button class="copy-btn" data-copy="dbdump list -H localhost -u root -d mydb">Copy</button>
                 </div>
             </article>
 
@@ -310,7 +310,6 @@ dbdump dump -h localhost -u root -d mydb --dry-run</code></pre>
                         <tr><td><code>--exclude-pattern</code></td><td>Exclude tables matching pattern (can be used multiple times)</td></tr>
                         <tr><td><code>--auto</code></td><td>Use smart defaults without interaction</td></tr>
                         <tr><td><code>--dry-run</code></td><td>Show what would be excluded without dumping</td></tr>
-                        <tr><td><code>--no-progress</code></td><td>Disable progress bar</td></tr>
                     </tbody>
                 </table>
             </article>
@@ -322,12 +321,12 @@ dbdump dump -h localhost -u root -d mydb --dry-run</code></pre>
 
                 <h4>1. Command Line</h4>
                 <div class="code-block">
-                    <pre><code>dbdump dump -u root -d mydb \
+                    <pre><code>dbdump dump -H localhost -u root -d mydb \
   --exclude sessions \
   --exclude cache \
   --exclude-pattern "log_*" \
   --exclude-pattern "temp_*"</code></pre>
-                    <button class="copy-btn" data-copy="dbdump dump -u root -d mydb --exclude sessions --exclude cache --exclude-pattern 'log_*'">Copy</button>
+                    <button class="copy-btn" data-copy="dbdump dump -H localhost -u root -d mydb --exclude sessions --exclude cache --exclude-pattern 'log_*'">Copy</button>
                 </div>
 
                 <h4>2. Project Config File</h4>
@@ -355,8 +354,8 @@ exclude:
                 </div>
                 <p>Use it with:</p>
                 <div class="code-block">
-                    <pre><code>dbdump dump -u root -d mydb --config ./myproject.yaml</code></pre>
-                    <button class="copy-btn" data-copy="dbdump dump -u root -d mydb --config ./myproject.yaml">Copy</button>
+                    <pre><code>dbdump dump -H localhost -u root -d mydb --config ./myproject.yaml</code></pre>
+                    <button class="copy-btn" data-copy="dbdump dump -H localhost -u root -d mydb --config ./myproject.yaml">Copy</button>
                 </div>
 
                 <h4>3. Global Config</h4>
@@ -444,19 +443,19 @@ dbdump dump -H db.example.com -u readonly -d myapp_prod --auto -o dev-db.sql">Co
 
                 <h4>Preview before dumping</h4>
                 <div class="code-block">
-                    <pre><code>dbdump list -u root -d mydb        # See table sizes
-dbdump dump -u root -d mydb --dry-run   # Preview exclusions</code></pre>
-                    <button class="copy-btn" data-copy="dbdump list -u root -d mydb">Copy</button>
+                    <pre><code>dbdump list -H localhost -u root -d mydb        # See table sizes
+dbdump dump -H localhost -u root -d mydb --dry-run   # Preview exclusions</code></pre>
+                    <button class="copy-btn" data-copy="dbdump list -H localhost -u root -d mydb">Copy</button>
                 </div>
 
                 <h4>Laravel project with extra exclusions</h4>
                 <div class="code-block">
-                    <pre><code>dbdump dump -u root -d laravel_db \
+                    <pre><code>dbdump dump -H localhost -u root -d laravel_db \
   --exclude jobs \
   --exclude notifications \
   --exclude password_resets \
   --auto</code></pre>
-                    <button class="copy-btn" data-copy="dbdump dump -u root -d laravel_db --exclude jobs --exclude notifications --exclude password_resets --auto">Copy</button>
+                    <button class="copy-btn" data-copy="dbdump dump -H localhost -u root -d laravel_db --exclude jobs --exclude notifications --exclude password_resets --auto">Copy</button>
                 </div>
 
                 <h4>Restore a dump</h4>
@@ -525,7 +524,7 @@ dbdump dump -u root -d mydb --dry-run   # Preview exclusions</code></pre>
                 <details>
                     <summary>Can I dump only the schema?</summary>
                     <div class="details-content">
-                        <p>Yes! Exclude all tables: <code>dbdump dump -u root -d mydb --exclude-pattern "*"</code></p>
+                        <p>Yes! Exclude all tables: <code>dbdump dump -H localhost -u root -d mydb --exclude-pattern "*"</code></p>
                     </div>
                 </details>
 

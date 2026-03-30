@@ -16,7 +16,7 @@ just test-all
 ### Option 2: Quick Integration Test
 
 ```bash
-# Faster test with small dataset on MySQL 8.0 only
+# Faster test with small dataset on MySQL 8.0 only; local compose is cleaned up automatically
 just test-integration-quick
 ```
 
@@ -37,7 +37,7 @@ just verify-security
 |---------|-------------|------|----------|
 | `just verify-security` | Verify password hiding & file perms | ~5s | Security verification |
 | `just test-security` | Same as verify-security | ~5s | Alias |
-| `just test-integration-quick` | Quick test (1 DB, small data) | ~2m | Fast feedback |
+| `just test-integration-quick` | Quick test (MySQL 8.0 only, small data) | ~2m | Fast feedback |
 | `just test-integration` | Full test (4 DBs, all tests) | ~10m | Before release |
 | `just test-integration-clean` | Full test + cleanup | ~10m | CI/CD |
 | `just test-all` | Unit + integration tests | ~10m | Complete verification |
@@ -94,7 +94,7 @@ ps aux | grep dbdump  # Should NOT show "secret"
 ps aux | grep -E "dbdump|mysqldump"  # Should NOT show password
 ```
 
-**Verifies:** Password passed via MYSQL_PWD env, not `-p` flag
+**Verifies:** Password is handed to `mysqldump` via a temporary `--defaults-extra-file`, not `-p`
 
 ### Test 4: File Permissions
 
@@ -116,14 +116,14 @@ grep '"-p' internal/database/dumper.go
 
 **Verifies:** Code doesn't use insecure `-p<password>` pattern
 
-### Test 6: MYSQL_PWD Usage
+### Test 6: `defaults-extra-file` Usage
 
 ```bash
-grep 'MYSQL_PWD' internal/database/dumper.go
-# Should find environment variable being set
+grep 'defaults-extra-file' internal/database/dumper.go
+# Should find temporary defaults file handling
 ```
 
-**Verifies:** Code sets MYSQL_PWD for subprocess
+**Verifies:** Code uses a temporary defaults file for subprocess auth
 
 ---
 
@@ -150,7 +150,7 @@ Security Verification Tests
 [INFO] Docker not running, skipping mysqldump subprocess test
 [INFO] Docker not running, skipping file permissions test
 [PASS] No '-p' password flag found in dumper.go (correct)
-[PASS] Code sets MYSQL_PWD environment variable
+[PASS] Code uses temporary defaults-extra-file auth
 
 ========================================
 Security Verification Results
@@ -202,12 +202,12 @@ Tests Failed: 0
 #### ❌ Password Visible in Process List
 ```
 [FAIL] Password 'super_secret_password_12345' is visible in process list!
-./bin/dbdump dump -h 127.0.0.1 -P 9999 -u root -p super_secret_password_12345
+./bin/dbdump dump -H 127.0.0.1 -P 9999 -u root -p super_secret_password_12345
 ```
 
 **Cause:** Password passed via `-p` flag instead of environment variable
 
-**Fix:** Check `internal/database/dumper.go` - ensure MYSQL_PWD env is used
+**Fix:** Check `internal/database/dumper.go` - ensure `--defaults-extra-file` is used for `mysqldump`
 
 #### ❌ File Permissions Wrong
 ```
@@ -238,7 +238,7 @@ Tests Failed: 0
 Testing: Triggers in structure dump... ✗
 ```
 
-**Cause:** mysqldump flags missing (`--triggers`, `--routines`, `--events`)
+**Cause:** trigger support or mysqldump compatibility issue
 
 **Fix:** Check `internal/database/dumper.go` dumpStructure() and dumpData()
 
@@ -260,7 +260,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
         with:
-          go-version: '1.23'
+          go-version: '1.24'
       - name: Security Tests
         run: just verify-security
 
@@ -270,7 +270,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
         with:
-          go-version: '1.23'
+          go-version: '1.24'
       - name: Integration Tests
         run: just test-integration-clean
 ```
@@ -336,11 +336,11 @@ bash test/verify-security.sh
 
 Different MySQL versions may have different default behaviors:
 
-- **MySQL 5.7:** No `--column-statistics` flag
-- **MySQL 8.0+:** Requires `--column-statistics=0` or will error
-- **MariaDB:** Different authentication plugins
+- **MySQL 5.7:** Skips unsupported compatibility flags such as `--column-statistics`
+- **MySQL 8.0+:** Uses `--column-statistics=0` to avoid warnings/errors
+- **MariaDB:** Uses the subset of compatibility flags reported by the installed client
 
-Our code handles these via conditional flags.
+The implementation detects supported flags from `mysqldump --help` and only applies compatible options.
 
 ---
 
@@ -353,7 +353,7 @@ Our code handles these via conditional flags.
 3. ✓ mysqldump subprocess doesn't show password
 4. ✓ Dump files created with 0600 permissions
 5. ✓ Code doesn't use `-p<password>` pattern
-6. ✓ Code sets MYSQL_PWD environment variable
+6. ✓ Code uses temporary defaults-extra-file auth
 
 ### Integration Tests (12 tests × 4 databases = 48 tests)
 
@@ -371,7 +371,7 @@ Our code handles these via conditional flags.
 11. ✓ Dry run mode works
 12. ✓ Custom output file works
 
-> **Note:** Stored procedures test is currently disabled due to MySQL 5.7 compatibility issues with newer mysqldump clients.
+> **Note:** Stored procedures are created in the fixture, but the dump path currently does not include routines, so the procedure assertion remains disabled.
 
 **Databases Tested:**
 - MySQL 5.7 (port 3307)

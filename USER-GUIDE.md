@@ -51,15 +51,13 @@ This ensures your database structure remains intact (no broken foreign keys!) wh
 
 ### macOS/Linux
 
+The release assets are versioned. Download the matching archive from the releases page, for example `dbdump-v1.1.1-darwin-arm64.tar.gz`.
+
 ```bash
-# Download the latest release
-curl -LO https://github.com/helgesverre/dbdump/releases/latest/download/dbdump-darwin-arm64
-
-# Make it executable
-chmod +x dbdump-darwin-arm64
-
-# Move to your PATH
-sudo mv dbdump-darwin-arm64 /usr/local/bin/dbdump
+curl -LO https://github.com/helgesverre/dbdump/releases/download/vX.Y.Z/dbdump-vX.Y.Z-darwin-arm64.tar.gz
+tar -xzf dbdump-vX.Y.Z-darwin-arm64.tar.gz
+chmod +x dbdump-vX.Y.Z-darwin-arm64
+sudo mv dbdump-vX.Y.Z-darwin-arm64 /usr/local/bin/dbdump
 ```
 
 ### From Source
@@ -104,11 +102,11 @@ For security, you should use environment variables for passwords:
 ```bash
 # Recommended: Use dbdump-specific variable
 export DBDUMP_MYSQL_PWD=yourpassword
-dbdump dump -u root -d mydatabase
+dbdump dump -H localhost -u root -d mydatabase
 
 # Alternative: Standard MySQL variable (fallback)
 export MYSQL_PWD=yourpassword
-dbdump dump -u root -d mydatabase
+dbdump dump -H localhost -u root -d mydatabase
 ```
 
 ---
@@ -119,12 +117,14 @@ dbdump uses a flexible, layered configuration system that allows you to customiz
 
 ### Configuration Priority
 
-Configurations are merged in this order (later overrides earlier):
+Configurations are merged in this order:
 
 1. **Built-in defaults** (embedded in the binary)
 2. **Global user config** (`~/.dbdump.yaml`)
 3. **Project-specific config** (specified with `--config` flag)
 4. **CLI flags** (`--exclude`, `--exclude-pattern`)
+
+Later layers can add exclusions, but they do not remove earlier ones.
 
 ### Default Excludes
 
@@ -146,9 +146,9 @@ dbdump comes with sensible defaults for common Laravel and PHP framework tables:
 **Pattern matches:**
 - `telescope_*` - All Laravel Telescope tables
 - `pulse_*` - All Laravel Pulse tables
-- `_cache` - Any table ending with "_cache"
+- `*_cache` - Any table ending with "_cache"
 
-These defaults are always loaded first and can be supplemented (not replaced) by your custom configs.
+These defaults are always loaded first and can be supplemented by your custom configs.
 
 ### Global User Config
 
@@ -201,7 +201,7 @@ exclude:
 **Usage:**
 
 ```bash
-dbdump dump -u root -d mydb --config ./myproject.yaml
+dbdump dump -H localhost -u root -d mydb --config ./myproject.yaml
 ```
 
 **When to use:**
@@ -215,13 +215,13 @@ Override everything at runtime with flags:
 
 ```bash
 # Exclude specific tables
-dbdump dump -u root -d mydb --exclude users --exclude orders
+dbdump dump -H localhost -u root -d mydb --exclude users --exclude orders
 
 # Exclude by pattern
-dbdump dump -u root -d mydb --exclude-pattern "temp_*" --exclude-pattern "old_*"
+dbdump dump -H localhost -u root -d mydb --exclude-pattern "temp_*" --exclude-pattern "old_*"
 
 # Combine both
-dbdump dump -u root -d mydb \
+dbdump dump -H localhost -u root -d mydb \
   --exclude sessions \
   --exclude cache \
   --exclude-pattern "log_*"
@@ -265,29 +265,28 @@ dbdump dump [flags]
 | `--exclude` | - | Exclude specific table (repeatable) | - |
 | `--exclude-pattern` | - | Exclude pattern (repeatable) | - |
 | `--auto` | - | Use defaults without interaction | false |
-| `--no-progress` | - | Disable progress bar | false |
 | `--dry-run` | - | Show what would be excluded without dumping | false |
 
 **Examples:**
 
 ```bash
 # Interactive mode (default)
-dbdump dump -u root -d mydb
+dbdump dump -H localhost -u root -d mydb
 
 # Auto mode with custom output
-dbdump dump -u root -d mydb --auto -o production-backup.sql
+dbdump dump -H localhost -u root -d mydb --auto -o production-backup.sql
 
 # Remote database
 dbdump dump -H db.example.com -P 3306 -u dbuser -d mydb
 
 # With project config
-dbdump dump -u root -d mydb --config ./project-config.yaml
+dbdump dump -H localhost -u root -d mydb --config ./project-config.yaml
 
 # Dry run to preview
-dbdump dump -u root -d mydb --dry-run
+dbdump dump -H localhost -u root -d mydb --dry-run
 
 # Additional CLI excludes
-dbdump dump -u root -d mydb --exclude users --exclude-pattern "test_*"
+dbdump dump -H localhost -u root -d mydb --exclude users --exclude-pattern "test_*"
 ```
 
 ### list Command
@@ -303,7 +302,7 @@ dbdump list [flags]
 **Example:**
 
 ```bash
-dbdump list -u root -d mydb
+dbdump list -H localhost -u root -d mydb
 ```
 
 **Output:**
@@ -329,7 +328,7 @@ Total: 5 tables
 
 ### config list Command
 
-Show all saved connection profiles.
+Show all saved connection profiles stored in `~/.config/dbdump/profiles.yaml`.
 
 **Basic Syntax:**
 
@@ -353,7 +352,7 @@ Saved connection profiles:
     Database: stagedb
 ```
 
-**Note:** Connection profile saving is not yet implemented but reserved for future use.
+The CLI currently exposes `config list` only. Profile creation and profile-based dumping are not implemented yet.
 
 ---
 
@@ -377,7 +376,7 @@ exclude:
 EOF
 
 # Now all your dumps will use this config
-dbdump dump -u root -d mydb
+dbdump dump -H localhost -u root -d mydb
 ```
 
 ### Example 2: Laravel Application
@@ -400,7 +399,7 @@ exclude:
 EOF
 
 # Use it
-dbdump dump -u root -d laravel_db --config laravel-config.yaml --auto
+dbdump dump -H localhost -u root -d laravel_db --config laravel-config.yaml --auto
 ```
 
 ### Example 3: Production to Development
@@ -428,7 +427,7 @@ mysql -u root mydb < prod-for-dev.sql
 Need to exclude something specific just this once:
 
 ```bash
-dbdump dump -u root -d mydb \
+dbdump dump -H localhost -u root -d mydb \
   --exclude user_activity \
   --exclude api_logs \
   --exclude-pattern "temp_*" \
@@ -441,13 +440,13 @@ Check your database first:
 
 ```bash
 # See all tables and sizes
-dbdump list -u root -d mydb
+dbdump list -H localhost -u root -d mydb
 
 # Do a dry run
-dbdump dump -u root -d mydb --dry-run
+dbdump dump -H localhost -u root -d mydb --dry-run
 
 # If happy, do the real dump
-dbdump dump -u root -d mydb
+dbdump dump -H localhost -u root -d mydb
 ```
 
 ---
@@ -486,23 +485,8 @@ When you run `dbdump dump` without the `--auto` flag, you'll enter interactive m
 
 ## Connection Profiles
 
-**Note:** Connection profile management is planned for a future release.
-
-The profiles system will allow you to save connection details:
-
-```bash
-# Save a profile (future feature)
-dbdump profile save production \
-  --host db.example.com \
-  --port 3306 \
-  --user produser \
-  --database maindb
-
-# Use it (future feature)
-dbdump dump --profile production
-```
-
-Profiles will be stored in `~/.config/dbdump/profiles.yaml`.
+`dbdump config list` reads saved profiles from `~/.config/dbdump/profiles.yaml`.
+Profile creation and profile-based dumping are not exposed by the CLI yet.
 
 ---
 
@@ -573,10 +557,10 @@ Pattern matching uses glob syntax:
 
 ```bash
 # List tables first
-dbdump list -u root -d mydb
+dbdump list -H localhost -u root -d mydb
 
 # Dry run with pattern
-dbdump dump -u root -d mydb --exclude-pattern "your_pattern_*" --dry-run
+dbdump dump -H localhost -u root -d mydb --exclude-pattern "your_pattern_*" --dry-run
 ```
 
 ---
@@ -611,7 +595,7 @@ mysql -u root -p database_name < dump_file.sql
 Yes! Use interactive mode and deselect all tables, or configure patterns to match everything:
 
 ```bash
-dbdump dump -u root -d mydb --exclude-pattern "*"
+dbdump dump -H localhost -u root -d mydb --exclude-pattern "*"
 ```
 
 ### What's the difference between exact and patterns?
@@ -640,7 +624,7 @@ Changes take effect on the next dump.
 Yes! Use the `--dry-run` flag:
 
 ```bash
-dbdump dump -u root -d mydb --dry-run
+dbdump dump -H localhost -u root -d mydb --dry-run
 ```
 
 This shows exactly what would be excluded without creating a dump.

@@ -1,19 +1,25 @@
 package ui
 
 import (
+	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/helgesverre/dbdump/internal/database"
 )
 
+// ErrSelectionCancelled is returned when the user cancels table selection.
+var ErrSelectionCancelled = errors.New("table selection cancelled")
+
 // TableSelectionModel represents the interactive table selection UI
 type TableSelectionModel struct {
-	tables   []database.TableInfo
-	selected map[string]bool
-	cursor   int
-	done     bool
+	tables    []database.TableInfo
+	selected  map[string]bool
+	cursor    int
+	done      bool
+	cancelled bool
 }
 
 // NewTableSelectionModel creates a new table selection model
@@ -43,6 +49,7 @@ func (m TableSelectionModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c", "q":
 			m.done = true
+			m.cancelled = true
 			return m, tea.Quit
 
 		case "enter":
@@ -61,6 +68,9 @@ func (m TableSelectionModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case " ":
 			// Toggle selection
+			if len(m.tables) == 0 {
+				return m, nil
+			}
 			table := m.tables[m.cursor].Name
 			m.selected[table] = !m.selected[table]
 		}
@@ -116,11 +126,16 @@ func (m TableSelectionModel) GetSelected() []string {
 			selected = append(selected, table)
 		}
 	}
+	sort.Strings(selected)
 	return selected
 }
 
 // RunInteractiveSelection runs the interactive table selection
 func RunInteractiveSelection(tables []database.TableInfo, preSelected []string) ([]string, error) {
+	if len(tables) == 0 {
+		return []string{}, nil
+	}
+
 	model := NewTableSelectionModel(tables, preSelected)
 
 	p := tea.NewProgram(model)
@@ -130,5 +145,8 @@ func RunInteractiveSelection(tables []database.TableInfo, preSelected []string) 
 	}
 
 	m := finalModel.(TableSelectionModel)
+	if m.cancelled {
+		return nil, ErrSelectionCancelled
+	}
 	return m.GetSelected(), nil
 }

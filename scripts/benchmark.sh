@@ -14,9 +14,10 @@ RESULTS_DIR="$PROJECT_ROOT/benchmark-results"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
 # Configuration
-DATABASE="${1:-example_db}"
+DATABASE="${1:-testdb}"
 ITERATIONS="${2:-3}"
 MYSQL_HOST="${MYSQL_HOST:-127.0.0.1}"
+MYSQL_PORT="${MYSQL_PORT:-3308}"
 MYSQL_USER="${MYSQL_USER:-root}"
 MYSQL_PASSWORD="${MYSQL_PASSWORD:-}"
 
@@ -34,6 +35,7 @@ SUMMARY_FILE="$RESULTS_DIR/benchmark_${DATABASE}_${TIMESTAMP}_summary.txt"
 
 echo -e "${BLUE}=== dbdump Performance Benchmark ===${NC}"
 echo -e "Database: ${GREEN}$DATABASE${NC}"
+echo -e "Host: ${GREEN}${MYSQL_HOST}:${MYSQL_PORT}${NC}"
 echo -e "Iterations: ${GREEN}$ITERATIONS${NC}"
 echo -e "Output: ${GREEN}$RESULTS_FILE${NC}"
 echo ""
@@ -46,14 +48,14 @@ if [ ! -f "$BINARY" ]; then
 fi
 
 # Check if database exists
-if ! mysql -h "$MYSQL_HOST" -u "$MYSQL_USER" ${MYSQL_PASSWORD:+-p"$MYSQL_PASSWORD"} -e "USE $DATABASE" 2>/dev/null; then
+if ! mysql -h "$MYSQL_HOST" -P "$MYSQL_PORT" -u "$MYSQL_USER" ${MYSQL_PASSWORD:+-p"$MYSQL_PASSWORD"} -e "USE $DATABASE" 2>/dev/null; then
     echo -e "${RED}Error: Database '$DATABASE' not found${NC}"
     exit 1
 fi
 
 # Get database statistics
 echo -e "${BLUE}Collecting database statistics...${NC}"
-DB_STATS=$(mysql -h "$MYSQL_HOST" -u "$MYSQL_USER" ${MYSQL_PASSWORD:+-p"$MYSQL_PASSWORD"} -N -e "
+DB_STATS=$(mysql -h "$MYSQL_HOST" -P "$MYSQL_PORT" -u "$MYSQL_USER" ${MYSQL_PASSWORD:+-p"$MYSQL_PASSWORD"} -N -e "
 SELECT
     COUNT(*) as table_count,
     ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) as total_mb,
@@ -105,9 +107,10 @@ for i in $(seq 1 $ITERATIONS); do
 
     # Run with time measurement
     /usr/bin/time -p "$BINARY" dump \
-        -H "$MYSQL_HOST" \
-        -u "$MYSQL_USER" \
-        ${MYSQL_PASSWORD:+-p "$MYSQL_PASSWORD"} \
+    -H "$MYSQL_HOST" \
+    -P "$MYSQL_PORT" \
+    -u "$MYSQL_USER" \
+    ${MYSQL_PASSWORD:+-p "$MYSQL_PASSWORD"} \
         -d "$DATABASE" \
         --auto \
         -o "$OUTPUT_FILE" \

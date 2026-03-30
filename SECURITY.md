@@ -44,35 +44,9 @@ dbdump dump -u root -d mydb
 - Still in environment, accessible to same-user processes
 - Must unset after use for maximum security
 
-#### 2. MySQL Config File (Most Secure)
+#### 2. MySQL Config File
 
-Create `~/.my.cnf` with restrictive permissions:
-
-```bash
-cat > ~/.my.cnf << 'EOF'
-[client]
-user=youruser
-password=yourpassword
-host=localhost
-EOF
-
-chmod 600 ~/.my.cnf
-```
-
-Then run dbdump without password flags:
-
-```bash
-dbdump dump -d mydb
-```
-
-**Pros:**
-- Not in process list or environment
-- Persistent across sessions
-- File permissions protect the password
-
-**Cons:**
-- Password stored in plaintext file (but protected by permissions)
-- Not suitable for multiple database credentials
+`~/.my.cnf` is useful for MySQL client tools, but dbdump does not currently read it for its own connection parameters. You still need to provide `--user` and `--database`, and use `DBDUMP_MYSQL_PWD`, `MYSQL_PWD`, or `-p` for the password.
 
 #### 3. Command-Line Flag (Least Secure)
 
@@ -151,7 +125,8 @@ FLUSH PRIVILEGES;
 
 ### Implemented
 
-- ✅ **Secure password passing** via `DBDUMP_MYSQL_PWD` or `MYSQL_PWD` environment variable (not command-line args)
+- ✅ **Secure password sourcing** via `DBDUMP_MYSQL_PWD` or `MYSQL_PWD`
+- ✅ **Secure mysqldump auth handoff** via a temporary `--defaults-extra-file` instead of `-p`
 - ✅ **Restrictive file permissions** (0600) for dump files
 - ✅ **Safe DSN construction** using mysql.Config with proper escaping
 - ✅ **Connection timeouts** to prevent hanging on unreachable databases
@@ -201,7 +176,7 @@ If dumping databases with payment card information:
 ## Version History
 
 ### v1.0.0 (Current - 2024-10-28)
-- **[SECURITY]** Fixed password exposure in process lists (now uses MYSQL_PWD env var)
+- **[SECURITY]** Fixed password exposure in process lists (now uses a temporary defaults file for mysqldump)
 - **[SECURITY]** Dump files created with 0600 permissions
 - **[SECURITY]** Safe DSN construction with proper escaping
 - **[SECURITY]** Connection timeouts prevent hanging

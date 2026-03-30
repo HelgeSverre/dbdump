@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/go-sql-driver/mysql"
 )
@@ -25,14 +26,10 @@ func (c *Connection) DSN() string {
 	cfg.Net = "tcp"
 	cfg.Addr = fmt.Sprintf("%s:%d", c.Host, c.Port)
 	cfg.DBName = c.Database
-
-	// Set reasonable timeouts
-	cfg.Params = map[string]string{
-		"timeout":      "5s",
-		"readTimeout":  "30s",
-		"writeTimeout": "30s",
-		"parseTime":    "true",
-	}
+	cfg.Timeout = 5 * time.Second
+	cfg.ReadTimeout = 30 * time.Second
+	cfg.WriteTimeout = 30 * time.Second
+	cfg.ParseTime = true
 
 	return cfg.FormatDSN()
 }

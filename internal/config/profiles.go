@@ -31,10 +31,6 @@ func GetProfilesPath() (string, error) {
 	}
 
 	configDir := filepath.Join(home, ".config", "dbdump")
-	if err := os.MkdirAll(configDir, 0755); err != nil {
-		return "", fmt.Errorf("failed to create config directory: %w", err)
-	}
-
 	return filepath.Join(configDir, "profiles.yaml"), nil
 }
 
@@ -61,58 +57,4 @@ func LoadProfiles() (*ProfilesConfig, error) {
 	}
 
 	return &config, nil
-}
-
-// SaveProfiles saves connection profiles
-func SaveProfiles(config *ProfilesConfig) error {
-	path, err := GetProfilesPath()
-	if err != nil {
-		return err
-	}
-
-	data, err := yaml.Marshal(config)
-	if err != nil {
-		return fmt.Errorf("failed to marshal profiles: %w", err)
-	}
-
-	if err := os.WriteFile(path, data, 0600); err != nil {
-		return fmt.Errorf("failed to write profiles: %w", err)
-	}
-
-	return nil
-}
-
-// GetProfile retrieves a profile by name
-func (pc *ProfilesConfig) GetProfile(name string) (*ConnectionProfile, error) {
-	for _, profile := range pc.Profiles {
-		if profile.Name == name {
-			return &profile, nil
-		}
-	}
-	return nil, fmt.Errorf("profile '%s' not found", name)
-}
-
-// AddProfile adds or updates a profile
-func (pc *ProfilesConfig) AddProfile(profile ConnectionProfile) {
-	// Check if profile already exists and update it
-	for i, p := range pc.Profiles {
-		if p.Name == profile.Name {
-			pc.Profiles[i] = profile
-			return
-		}
-	}
-
-	// Add new profile
-	pc.Profiles = append(pc.Profiles, profile)
-}
-
-// RemoveProfile removes a profile by name
-func (pc *ProfilesConfig) RemoveProfile(name string) error {
-	for i, p := range pc.Profiles {
-		if p.Name == name {
-			pc.Profiles = append(pc.Profiles[:i], pc.Profiles[i+1:]...)
-			return nil
-		}
-	}
-	return fmt.Errorf("profile '%s' not found", name)
 }
