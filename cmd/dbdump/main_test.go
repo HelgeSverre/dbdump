@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"io"
 	"os"
@@ -60,6 +61,16 @@ func TestNewRootCmdIncludesExpectedCommands(t *testing.T) {
 		if cmd.PersistentFlags().Lookup(flagName) == nil {
 			t.Fatalf("expected persistent flag %q to be registered", flagName)
 		}
+	}
+
+	for _, flagName := range []string{"ssh-host", "ssh-port", "ssh-user", "ssh-key", "ssh-local-port"} {
+		if cmd.PersistentFlags().Lookup(flagName) == nil {
+			t.Fatalf("expected SSH flag %q to be registered", flagName)
+		}
+	}
+
+	if cmd.Flags().Lookup("compress") != nil {
+		t.Fatal("compress flag should be scoped to the dump subcommand")
 	}
 }
 
@@ -217,13 +228,28 @@ func TestResolveOutputPathUsesDefaultTimestamp(t *testing.T) {
 		return time.Date(2026, time.January, 2, 3, 4, 5, 0, time.UTC)
 	})
 
-	got, err := resolveOutputPath("testdb", "")
+	got, err := resolveOutputPath("testdb", "", "auto")
 	if err != nil {
 		t.Fatalf("resolveOutputPath returned error: %v", err)
 	}
 
 	if filepath.Base(got) != "testdb_20260102_030405.sql" {
 		t.Fatalf("unexpected default output path: %s", got)
+	}
+}
+
+func TestResolveOutputPathUsesCompressionExtension(t *testing.T) {
+	stubNowTime(t, func() time.Time {
+		return time.Date(2026, time.January, 2, 3, 4, 5, 0, time.UTC)
+	})
+
+	got, err := resolveOutputPath("testdb", "", "gzip")
+	if err != nil {
+		t.Fatalf("resolveOutputPath returned error: %v", err)
+	}
+
+	if filepath.Base(got) != "testdb_20260102_030405.sql.gz" {
+		t.Fatalf("unexpected compressed default output path: %s", got)
 	}
 }
 
@@ -290,6 +316,9 @@ func TestRunDumpDryRunPrintsPlan(t *testing.T) {
 	})
 	stubPrintInfo(t, func(string) {})
 	stubPrintSuccess(t, func(string) {})
+	stubStartSSHTunnel(t, func(ctx context.Context, conn *database.Connection) (func() error, error) {
+		return nil, nil
+	})
 	stubNowTime(t, func() time.Time {
 		return time.Date(2026, time.March, 30, 12, 0, 0, 0, time.UTC)
 	})
@@ -303,7 +332,7 @@ func TestRunDumpDryRunPrintsPlan(t *testing.T) {
 	})
 
 	output := captureStdout(t, func() {
-		err := runDump(connectionFlags{Host: "127.0.0.1", Port: 3306, User: "root", Database: "testdb"}, dumpFlags{AutoMode: true, DryRun: true})
+		err := runDump(connectionFlags{Host: "127.0.0.1", Port: 3306, User: "root", Database: "testdb"}, dumpFlags{AutoMode: true, DryRun: true, Compression: "gzip"})
 		if err != nil {
 			t.Fatalf("runDump returned error: %v", err)
 		}
@@ -316,7 +345,7 @@ func TestRunDumpDryRunPrintsPlan(t *testing.T) {
 	if !strings.Contains(output, "Dry run - would exclude the following tables:") || !strings.Contains(output, "audits") {
 		t.Fatalf("unexpected dry-run output: %q", output)
 	}
-	if !strings.Contains(output, "testdb_20260330_120000.sql") {
+	if !strings.Contains(output, "testdb_20260330_120000.sql.gz") {
 		t.Fatalf("expected default output path in dry-run output, got %q", output)
 	}
 }
@@ -333,6 +362,9 @@ func TestRunDumpSuccessInvokesDumper(t *testing.T) {
 	stubPrintSuccess(t, func(string) {})
 	stubPrintError(t, func(error) {})
 	stubCheckMySQLDump(t, func() error { return nil })
+	stubStartSSHTunnel(t, func(ctx context.Context, conn *database.Connection) (func() error, error) {
+		return nil, nil
+	})
 
 	var gotOptions *database.DumpOptions
 	stubNewDumper(t, func(opts *database.DumpOptions) dumpRunner {
@@ -355,7 +387,7 @@ func TestRunDumpSuccessInvokesDumper(t *testing.T) {
 	outputPath := filepath.Join(t.TempDir(), "backup.sql")
 	err := runDump(
 		connectionFlags{Host: "127.0.0.1", Port: 3306, User: "root", Database: "testdb"},
-		dumpFlags{AutoMode: true, OutputFile: outputPath},
+		dumpFlags{AutoMode: true, OutputFile: outputPath, Compression: "zstd"},
 	)
 	if err != nil {
 		t.Fatalf("runDump returned error: %v", err)
@@ -370,6 +402,9 @@ func TestRunDumpSuccessInvokesDumper(t *testing.T) {
 	}
 	if gotOptions.OutputFile != outputPath {
 		t.Fatalf("unexpected output file: got %q want %q", gotOptions.OutputFile, outputPath)
+	}
+	if gotOptions.Compression != "zstd" {
+		t.Fatalf("unexpected compression: got %q want %q", gotOptions.Compression, "zstd")
 	}
 	if !slices.Contains(gotOptions.ExcludeTables, "audits") {
 		t.Fatalf("expected audits to be excluded, got %v", gotOptions.ExcludeTables)
@@ -386,6 +421,9 @@ func TestRunDumpReturnsFeatureCheckError(t *testing.T) {
 	})
 	stubPrintInfo(t, func(string) {})
 	stubPrintSuccess(t, func(string) {})
+	stubStartSSHTunnel(t, func(ctx context.Context, conn *database.Connection) (func() error, error) {
+		return nil, nil
+	})
 	stubCheckMySQLDump(t, func() error {
 		return errors.New("missing binary")
 	})
@@ -393,6 +431,47 @@ func TestRunDumpReturnsFeatureCheckError(t *testing.T) {
 	err := runDump(connectionFlags{Host: "127.0.0.1", Port: 3306, User: "root", Database: "testdb"}, dumpFlags{AutoMode: true})
 	if err == nil || !strings.Contains(err.Error(), "mysqldump is required but not found in PATH") {
 		t.Fatalf("expected mysqldump error, got %v", err)
+	}
+}
+
+func TestRunDumpStartsSSHTunnel(t *testing.T) {
+	session := &fakeSession{}
+	stubOpenInspection(t, func(conn *database.Connection) (inspectionSession, tableInspector, error) {
+		if conn.Host != "127.0.0.1" || conn.Port != 4406 {
+			t.Fatalf("expected tunneled connection, got %s:%d", conn.Host, conn.Port)
+		}
+		return session, fakeInspector{tables: []database.TableInfo{{Name: "users"}}}, nil
+	})
+	stubPrintInfo(t, func(string) {})
+	stubPrintSuccess(t, func(string) {})
+	stubPrintError(t, func(error) {})
+	stubCheckMySQLDump(t, func() error { return nil })
+	stubNewDumper(t, func(opts *database.DumpOptions) dumpRunner {
+		return fakeDumper{result: &database.DumpResult{OutputFile: opts.OutputFile, FileSizeDisplay: "1 B"}}
+	})
+
+	started := false
+	stopped := false
+	stubStartSSHTunnel(t, func(ctx context.Context, conn *database.Connection) (func() error, error) {
+		started = true
+		conn.Host = "127.0.0.1"
+		conn.Port = 4406
+		return func() error {
+			stopped = true
+			return nil
+		}, nil
+	})
+
+	err := runDump(connectionFlags{
+		Host: "db.internal", Port: 3306, User: "root", Database: "testdb",
+		SSH: sshFlags{Host: "bastion.example.com", Port: 22, User: "deploy"},
+	}, dumpFlags{AutoMode: true})
+	if err != nil {
+		t.Fatalf("runDump returned error: %v", err)
+	}
+
+	if !started || !stopped {
+		t.Fatalf("expected SSH tunnel lifecycle to run, started=%v stopped=%v", started, stopped)
 	}
 }
 
@@ -448,6 +527,15 @@ func stubCheckMySQLDump(t *testing.T, fn func() error) {
 	checkMySQLDump = fn
 	t.Cleanup(func() {
 		checkMySQLDump = original
+	})
+}
+
+func stubStartSSHTunnel(t *testing.T, fn func(context.Context, *database.Connection) (func() error, error)) {
+	t.Helper()
+	original := startSSHTunnel
+	startSSHTunnel = fn
+	t.Cleanup(func() {
+		startSSHTunnel = original
 	})
 }
 

@@ -2,6 +2,7 @@ package database
 
 import (
 	"bufio"
+	"compress/gzip"
 	"context"
 	"fmt"
 	"io"
@@ -13,6 +14,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/klauspost/compress/zstd"
 )
 
 var (
@@ -41,6 +44,7 @@ type DumpOptions struct {
 	ExcludeTables []string
 	OutputFile    string
 	DryRun        bool
+	Compression   string
 }
 
 // Dumper handles database dumping operations
@@ -107,7 +111,17 @@ func (d *Dumper) Dump() (result *DumpResult, err error) {
 		return nil, fmt.Errorf("failed to set output file permissions: %w", err)
 	}
 
-	writer := bufio.NewWriterSize(outFile, 256*1024)
+	compressionFormat, err := ResolveCompressionFormat(d.options.OutputFile, d.options.Compression)
+	if err != nil {
+		return nil, err
+	}
+
+	compressedWriter, err := newCompressedWriter(outFile, compressionFormat)
+	if err != nil {
+		return nil, err
+	}
+
+	writer := bufio.NewWriterSize(compressedWriter, 256*1024)
 
 	if err = d.dumpStructure(writer, defaultsFile); err != nil {
 		return nil, fmt.Errorf("failed to dump structure: %w", err)
@@ -119,6 +133,10 @@ func (d *Dumper) Dump() (result *DumpResult, err error) {
 
 	if err = writer.Flush(); err != nil {
 		return nil, fmt.Errorf("failed to flush output: %w", err)
+	}
+
+	if err = compressedWriter.Close(); err != nil {
+		return nil, fmt.Errorf("failed to finalize compressed output: %w", err)
 	}
 
 	if err = outFile.Sync(); err != nil {
@@ -189,6 +207,78 @@ func replaceOutputFile(tempPath, finalPath string) error {
 	}
 
 	return nil
+}
+
+// Compression formats supported by dbdump.
+const (
+	CompressionAuto = "auto"
+	CompressionNone = "none"
+	CompressionGzip = "gzip"
+	CompressionZstd = "zstd"
+)
+
+func ResolveCompressionFormat(outputPath, requested string) (string, error) {
+	format := strings.TrimSpace(strings.ToLower(requested))
+	if format == "" {
+		format = CompressionAuto
+	}
+
+	if format == CompressionAuto {
+		return inferCompressionFormat(outputPath), nil
+	}
+
+	switch format {
+	case CompressionNone, CompressionGzip, CompressionZstd:
+		return format, nil
+	default:
+		return "", fmt.Errorf("unsupported compression format %q (expected auto, none, gzip, or zstd)", requested)
+	}
+}
+
+func CompressionExtension(format string) string {
+	switch format {
+	case CompressionGzip:
+		return ".gz"
+	case CompressionZstd:
+		return ".zst"
+	default:
+		return ""
+	}
+}
+
+func inferCompressionFormat(outputPath string) string {
+	lower := strings.ToLower(outputPath)
+	switch {
+	case strings.HasSuffix(lower, ".sql.gz"), strings.HasSuffix(lower, ".gz"):
+		return CompressionGzip
+	case strings.HasSuffix(lower, ".sql.zst"), strings.HasSuffix(lower, ".zst"), strings.HasSuffix(lower, ".zstd"):
+		return CompressionZstd
+	default:
+		return CompressionNone
+	}
+}
+
+type nopWriteCloser struct {
+	io.Writer
+}
+
+func (nopWriteCloser) Close() error { return nil }
+
+func newCompressedWriter(target io.Writer, format string) (io.WriteCloser, error) {
+	switch format {
+	case CompressionNone:
+		return nopWriteCloser{Writer: target}, nil
+	case CompressionGzip:
+		return gzip.NewWriter(target), nil
+	case CompressionZstd:
+		writer, err := zstd.NewWriter(target)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create zstd writer: %w", err)
+		}
+		return writer, nil
+	default:
+		return nil, fmt.Errorf("unsupported compression format %q", format)
+	}
 }
 
 // dumpStructure dumps the structure of all tables

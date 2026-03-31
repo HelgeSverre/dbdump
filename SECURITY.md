@@ -90,10 +90,13 @@ When connecting to remote databases:
 
 1. **Use SSH Tunnels** for untrusted networks:
 ```bash
-# Create SSH tunnel
-ssh -L 3307:localhost:3306 user@db-server
+# Let dbdump manage the tunnel
+dbdump dump -H 127.0.0.1 -P 3306 -u dbuser -d mydb \
+  --ssh-host db-server \
+  --ssh-user user
 
-# Connect via tunnel
+# Or create the tunnel yourself
+ssh -L 3307:localhost:3306 user@db-server
 dbdump dump -H 127.0.0.1 -P 3307 -u dbuser -d mydb
 ```
 
@@ -128,6 +131,7 @@ FLUSH PRIVILEGES;
 - ✅ **Secure password sourcing** via `DBDUMP_MYSQL_PWD` or `MYSQL_PWD`
 - ✅ **Secure mysqldump auth handoff** via a temporary `--defaults-extra-file` instead of `-p`
 - ✅ **Restrictive file permissions** (0600) for dump files
+- ✅ **Optional built-in SSH tunneling** for remote database access through a bastion
 - ✅ **Safe DSN construction** using mysql.Config with proper escaping
 - ✅ **Connection timeouts** to prevent hanging on unreachable databases
 - ✅ **Signal handling** for clean shutdown on Ctrl+C
@@ -175,9 +179,10 @@ If dumping databases with payment card information:
 
 ## Version History
 
-### v1.1.1 (Current - 2026-03-02)
+### v1.2.0 (Current - 2026-03-31)
 - **[SECURITY]** Fixed password exposure in process lists (now uses a temporary defaults file for mysqldump)
 - **[SECURITY]** Dump files created with 0600 permissions
+- **[SECURITY]** Added optional built-in SSH tunneling for remote dumps over untrusted networks
 - **[SECURITY]** Safe DSN construction with proper escaping
 - **[SECURITY]** Connection timeouts prevent hanging
 - **[SECURITY]** Added DBDUMP_MYSQL_PWD as preferred environment variable
@@ -197,4 +202,4 @@ Security improvements based on:
 
 ---
 
-**Last Updated:** 2026-03-30
+**Last Updated:** 2026-03-31

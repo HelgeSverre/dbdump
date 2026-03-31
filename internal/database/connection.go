@@ -15,6 +15,7 @@ type Connection struct {
 	User     string
 	Password string
 	Database string
+	SSH      SSHConfig
 }
 
 // DSN returns the data source name for MySQL connection

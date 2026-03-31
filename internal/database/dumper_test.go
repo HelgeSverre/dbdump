@@ -2,12 +2,16 @@ package database
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/klauspost/compress/zstd"
 )
 
 func TestDumpFlushesBeforeReportingSize(t *testing.T) {
@@ -62,6 +66,100 @@ func TestDumpFlushesBeforeReportingSize(t *testing.T) {
 
 	if !bytes.Contains(data, []byte("CREATE TABLE users")) || !bytes.Contains(data, []byte("INSERT INTO users")) {
 		t.Fatalf("unexpected dump contents: %q", string(data))
+	}
+}
+
+func TestDumpWritesGzipCompressedOutput(t *testing.T) {
+	resetMySQLDumpFeatures()
+
+	restore := stubMySQLDump(t,
+		func(ctx context.Context, name string, args ...string) *exec.Cmd {
+			script := "printf 'CREATE TABLE users(id int);\\n'"
+			if containsArg(args, "--no-create-info") {
+				script = "printf 'INSERT INTO users VALUES (1);\\n'"
+			}
+			return exec.CommandContext(ctx, "sh", "-c", script)
+		},
+	)
+	defer restore()
+
+	outputFile := filepath.Join(t.TempDir(), "dump.sql.gz")
+	dumper := NewDumper(&DumpOptions{
+		Connection:  &Connection{Host: "127.0.0.1", Port: 3306, User: "root", Database: "testdb"},
+		OutputFile:  outputFile,
+		Compression: CompressionGzip,
+	})
+
+	if _, err := dumper.Dump(); err != nil {
+		t.Fatalf("Dump returned error: %v", err)
+	}
+
+	file, err := os.Open(outputFile)
+	if err != nil {
+		t.Fatalf("Open returned error: %v", err)
+	}
+	defer func() { _ = file.Close() }()
+
+	reader, err := gzip.NewReader(file)
+	if err != nil {
+		t.Fatalf("NewReader returned error: %v", err)
+	}
+	defer func() { _ = reader.Close() }()
+
+	data, err := io.ReadAll(reader)
+	if err != nil {
+		t.Fatalf("ReadAll returned error: %v", err)
+	}
+
+	if !bytes.Contains(data, []byte("CREATE TABLE users")) || !bytes.Contains(data, []byte("INSERT INTO users")) {
+		t.Fatalf("unexpected gzip dump contents: %q", string(data))
+	}
+}
+
+func TestDumpWritesZstdCompressedOutput(t *testing.T) {
+	resetMySQLDumpFeatures()
+
+	restore := stubMySQLDump(t,
+		func(ctx context.Context, name string, args ...string) *exec.Cmd {
+			script := "printf 'CREATE TABLE users(id int);\\n'"
+			if containsArg(args, "--no-create-info") {
+				script = "printf 'INSERT INTO users VALUES (1);\\n'"
+			}
+			return exec.CommandContext(ctx, "sh", "-c", script)
+		},
+	)
+	defer restore()
+
+	outputFile := filepath.Join(t.TempDir(), "dump.sql.zst")
+	dumper := NewDumper(&DumpOptions{
+		Connection:  &Connection{Host: "127.0.0.1", Port: 3306, User: "root", Database: "testdb"},
+		OutputFile:  outputFile,
+		Compression: CompressionZstd,
+	})
+
+	if _, err := dumper.Dump(); err != nil {
+		t.Fatalf("Dump returned error: %v", err)
+	}
+
+	file, err := os.Open(outputFile)
+	if err != nil {
+		t.Fatalf("Open returned error: %v", err)
+	}
+	defer func() { _ = file.Close() }()
+
+	reader, err := zstd.NewReader(file)
+	if err != nil {
+		t.Fatalf("NewReader returned error: %v", err)
+	}
+	defer reader.Close()
+
+	data, err := io.ReadAll(reader)
+	if err != nil {
+		t.Fatalf("ReadAll returned error: %v", err)
+	}
+
+	if !bytes.Contains(data, []byte("CREATE TABLE users")) || !bytes.Contains(data, []byte("INSERT INTO users")) {
+		t.Fatalf("unexpected zstd dump contents: %q", string(data))
 	}
 }
 
@@ -210,6 +308,41 @@ func TestGetMySQLDumpFeaturesReturnsHelpError(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "failed to inspect mysqldump features") {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestResolveCompressionFormat(t *testing.T) {
+	tests := []struct {
+		name      string
+		output    string
+		requested string
+		want      string
+		wantErr   string
+	}{
+		{name: "auto none", output: "dump.sql", requested: "auto", want: CompressionNone},
+		{name: "auto gzip", output: "dump.sql.gz", requested: "auto", want: CompressionGzip},
+		{name: "auto zstd", output: "dump.sql.zst", requested: "auto", want: CompressionZstd},
+		{name: "explicit gzip", output: "dump.sql", requested: "gzip", want: CompressionGzip},
+		{name: "explicit none", output: "dump.sql.gz", requested: "none", want: CompressionNone},
+		{name: "invalid", output: "dump.sql", requested: "brotli", wantErr: "unsupported compression"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ResolveCompressionFormat(tt.output, tt.requested)
+			if tt.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+					t.Fatalf("expected error containing %q, got %v", tt.wantErr, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("ResolveCompressionFormat returned error: %v", err)
+			}
+			if got != tt.want {
+				t.Fatalf("unexpected compression: got %q want %q", got, tt.want)
+			}
+		})
 	}
 }
 

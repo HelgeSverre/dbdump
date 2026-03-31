@@ -37,7 +37,7 @@ go install github.com/helgesverre/dbdump/cmd/dbdump@latest
 
 ### Pre-built Binaries
 
-Download the matching versioned asset from the [releases page](https://github.com/helgesverre/dbdump/releases). Asset names include the tag, for example `dbdump-v1.1.1-darwin-arm64.tar.gz`.
+Download the matching versioned asset from the [releases page](https://github.com/helgesverre/dbdump/releases). Asset names include the tag, for example `dbdump-v1.2.0-darwin-arm64.tar.gz`.
 
 #### macOS (Apple Silicon)
 
@@ -156,6 +156,14 @@ dbdump dump -H localhost -u root -d mydb --dry-run
 
 # Dump with custom output file
 dbdump dump -H localhost -u root -d mydb -o backup.sql
+
+# Dump with streaming compression
+dbdump dump -H localhost -u root -d mydb --auto --compress gzip
+
+# Dump through an SSH bastion
+dbdump dump -H 127.0.0.1 -P 3306 -u root -d mydb \
+  --ssh-host bastion.example.com \
+  --ssh-user deploy
 ```
 
 ### Connection Options
@@ -177,7 +185,33 @@ dbdump dump -H localhost -u root -d mydb -o backup.sql
     --exclude-pattern  Exclude tables matching pattern (repeatable)
     --auto             Use smart defaults without interaction
     --dry-run          Show what would be dumped without dumping
+    --compress         Compression format: auto, none, gzip, zstd
+    --ssh-host         SSH bastion host for tunneling to the database
+    --ssh-port         SSH bastion port (default: 22)
+    --ssh-user         SSH username (defaults to database user)
+    --ssh-key          SSH private key path
+    --ssh-local-port   Local port for the SSH tunnel (default: auto)
 ```
+
+### Compression
+
+`dbdump` can stream output as plain SQL, gzip, or zstd. `--compress auto` infers the format from the output filename, while explicit formats override filename inference.
+
+If you omit `--output`, compressed dumps use matching default names such as `mydb_20260331_120000.sql.gz` or `mydb_20260331_120000.sql.zst`.
+
+### SSH Tunneling
+
+You can still create a manual tunnel yourself, but `dbdump` can now manage it directly:
+
+```bash
+dbdump dump -H 127.0.0.1 -P 3306 -u root -d mydb \
+  --ssh-host bastion.example.com \
+  --ssh-user deploy \
+  --ssh-key ~/.ssh/id_ed25519 \
+  --auto
+```
+
+When SSH tunneling is enabled, `-H/--host` and `-P/--port` still describe the database endpoint as seen from the SSH server.
 
 ### Examples
 
@@ -197,6 +231,15 @@ dbdump dump -H localhost -u root -d mydb --config ./myproject.yaml
 
 # Auto mode with custom output
 dbdump dump -H localhost -u root -d mydb --auto -o daily-backup.sql
+
+# Auto mode with gzip output
+dbdump dump -H localhost -u root -d mydb --auto --compress gzip
+
+# Remote dump through SSH
+dbdump dump -H 127.0.0.1 -P 3306 -u root -d mydb \
+  --ssh-host bastion.example.com \
+  --ssh-user deploy \
+  --auto
 ```
 
 ## Configuration

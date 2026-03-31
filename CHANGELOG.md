@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **[Dump]** Added streaming dump compression with `--compress auto|none|gzip|zstd`, including extension-based inference and compressed default output names.
+- **[Connectivity]** Added optional SSH tunnel support via `--ssh-host`, `--ssh-port`, `--ssh-user`, `--ssh-key`, and `--ssh-local-port` for both inspection and dumping.
+
+### Changed
+- **[Docs]** Updated roadmap and version references to the current `v1.2.x` release line.
+
 ## [1.2.0] - 2026-03-31
 
 ### Added
@@ -268,13 +275,12 @@ dbdump is faster and more scriptable:
 
 ## Future Roadmap
 
-### v1.2.0 (Planned)
-- Parallel table dumping (2-3x speedup)
-- Streaming compression support (gzip/zstd)
-- SSH tunnel support
-- Cloud storage integration (S3, GCS)
-
 ### v1.3.0 (Planned)
+- Parallel table dumping (2-3x speedup)
+- Cloud storage integration (S3, GCS)
+- Native TLS/SSL connection support
+
+### v1.4.0 (Planned)
 - Data anonymization/masking
 - Incremental dumps
 - Binary format support
@@ -300,7 +306,8 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ---
 
 <!-- Version comparison links -->
-[Unreleased]: https://github.com/helgesverre/dbdump/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/helgesverre/dbdump/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/helgesverre/dbdump/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/helgesverre/dbdump/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/helgesverre/dbdump/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/helgesverre/dbdump/compare/v1.0.0...v1.0.1

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -46,6 +47,9 @@ var (
 	printInfo         = ui.PrintInfo
 	printSuccess      = ui.PrintSuccess
 	printSummary      = ui.PrintSummary
+	startSSHTunnel    = func(ctx context.Context, conn *database.Connection) (func() error, error) {
+		return database.StartSSHTunnel(ctx, conn)
+	}
 )
 
 type connectionFlags struct {
@@ -54,6 +58,15 @@ type connectionFlags struct {
 	User     string
 	Password string
 	Database string
+	SSH      sshFlags
+}
+
+type sshFlags struct {
+	Host      string
+	Port      int
+	User      string
+	KeyFile   string
+	LocalPort int
 }
 
 type dumpFlags struct {
@@ -63,6 +76,7 @@ type dumpFlags struct {
 	ExcludePatterns []string
 	AutoMode        bool
 	DryRun          bool
+	Compression     string
 }
 
 func main() {
@@ -88,6 +102,11 @@ dumps faster and more manageable for development environments.`,
 	rootCmd.PersistentFlags().StringVarP(&conn.User, "user", "u", "", "Database user")
 	rootCmd.PersistentFlags().StringVarP(&conn.Password, "password", "p", "", "Database password (or use DBDUMP_MYSQL_PWD/MYSQL_PWD env)")
 	rootCmd.PersistentFlags().StringVarP(&conn.Database, "database", "d", "", "Database name")
+	rootCmd.PersistentFlags().StringVar(&conn.SSH.Host, "ssh-host", "", "SSH bastion host for tunneling to the database")
+	rootCmd.PersistentFlags().IntVar(&conn.SSH.Port, "ssh-port", 22, "SSH bastion port")
+	rootCmd.PersistentFlags().StringVar(&conn.SSH.User, "ssh-user", "", "SSH username (defaults to database user)")
+	rootCmd.PersistentFlags().StringVar(&conn.SSH.KeyFile, "ssh-key", "", "SSH private key path")
+	rootCmd.PersistentFlags().IntVar(&conn.SSH.LocalPort, "ssh-local-port", 0, "Local port for the SSH tunnel (0 picks a free port)")
 
 	rootCmd.AddCommand(newDumpCmd(conn))
 	rootCmd.AddCommand(newListCmd(conn))
@@ -115,6 +134,7 @@ sessions, cache) while preserving their structure.`,
 	dumpCmd.Flags().StringArrayVar(&opts.ExcludePatterns, "exclude-pattern", []string{}, "Exclude tables matching pattern (repeatable)")
 	dumpCmd.Flags().BoolVar(&opts.AutoMode, "auto", false, "Use smart defaults without interaction")
 	dumpCmd.Flags().BoolVar(&opts.DryRun, "dry-run", false, "Show what would be dumped without dumping")
+	dumpCmd.Flags().StringVar(&opts.Compression, "compress", "auto", "Compression format: auto, none, gzip, zstd")
 
 	return dumpCmd
 }
@@ -153,6 +173,12 @@ func runDump(connFlags connectionFlags, opts dumpFlags) error {
 	}
 
 	conn := connFlags.toConnection()
+	stopTunnel, err := startSSHTunnel(context.Background(), conn)
+	if err != nil {
+		return err
+	}
+	defer closeSSH(stopTunnel)
+
 	session, inspector, err := openInspection(conn)
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
@@ -189,7 +215,7 @@ func runDump(connFlags connectionFlags, opts dumpFlags) error {
 		return err
 	}
 
-	outputPath, err := resolveOutputPath(connFlags.Database, opts.OutputFile)
+	outputPath, err := resolveOutputPath(connFlags.Database, opts.OutputFile, opts.Compression)
 	if err != nil {
 		return err
 	}
@@ -214,6 +240,7 @@ func runDump(connFlags connectionFlags, opts dumpFlags) error {
 		ExcludeTables: finalExcludes,
 		OutputFile:    outputPath,
 		DryRun:        opts.DryRun,
+		Compression:   opts.Compression,
 	})
 
 	result, err := dumper.Dump()
@@ -233,6 +260,12 @@ func runList(connFlags connectionFlags) error {
 	}
 
 	conn := connFlags.toConnection()
+	stopTunnel, err := startSSHTunnel(context.Background(), conn)
+	if err != nil {
+		return err
+	}
+	defer closeSSH(stopTunnel)
+
 	session, inspector, err := openInspection(conn)
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
@@ -305,12 +338,24 @@ func (c connectionFlags) validate() error {
 }
 
 func (c connectionFlags) toConnection() *database.Connection {
+	sshConfig := database.SSHConfig{
+		Host:      c.SSH.Host,
+		Port:      c.SSH.Port,
+		User:      c.SSH.User,
+		KeyFile:   c.SSH.KeyFile,
+		LocalPort: c.SSH.LocalPort,
+	}
+	if sshConfig.User == "" {
+		sshConfig.User = c.User
+	}
+
 	return &database.Connection{
 		Host:     c.Host,
 		Port:     c.Port,
 		User:     c.User,
 		Password: c.Password,
 		Database: c.Database,
+		SSH:      sshConfig,
 	}
 }
 
@@ -377,11 +422,16 @@ func resolveExcludes(tables []database.TableInfo, preSelected []string, autoMode
 	return selected, nil
 }
 
-func resolveOutputPath(databaseName, configuredPath string) (string, error) {
+func resolveOutputPath(databaseName, configuredPath, compression string) (string, error) {
+	compressionFormat, err := database.ResolveCompressionFormat(configuredPath, compression)
+	if err != nil {
+		return "", err
+	}
+
 	outputPath := configuredPath
 	if outputPath == "" {
 		timestamp := nowTime().Format("20060102_150405")
-		outputPath = fmt.Sprintf("%s_%s.sql", databaseName, timestamp)
+		outputPath = fmt.Sprintf("%s_%s.sql%s", databaseName, timestamp, database.CompressionExtension(compressionFormat))
 	}
 
 	absPath, err := filepath.Abs(outputPath)
@@ -395,5 +445,14 @@ func resolveOutputPath(databaseName, configuredPath string) (string, error) {
 func closeDB(db interface{ Close() error }) {
 	if err := db.Close(); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: failed to close database connection: %v\n", err)
+	}
+}
+
+func closeSSH(stop func() error) {
+	if stop == nil {
+		return
+	}
+	if err := stop(); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to stop SSH tunnel: %v\n", err)
 	}
 }

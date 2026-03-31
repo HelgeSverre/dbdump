@@ -51,7 +51,7 @@ This ensures your database structure remains intact (no broken foreign keys!) wh
 
 ### macOS/Linux
 
-The release assets are versioned. Download the matching archive from the releases page, for example `dbdump-v1.1.1-darwin-arm64.tar.gz`.
+The release assets are versioned. Download the matching archive from the releases page, for example `dbdump-v1.2.0-darwin-arm64.tar.gz`.
 
 ```bash
 curl -LO https://github.com/helgesverre/dbdump/releases/download/vX.Y.Z/dbdump-vX.Y.Z-darwin-arm64.tar.gz
@@ -95,6 +95,9 @@ dbdump dump -u root -p yourpassword -d mydatabase --auto
 
 # Specify output file
 dbdump dump -u root -p yourpassword -d mydatabase -o backup.sql
+
+# Stream-compressed dump
+dbdump dump -u root -p yourpassword -d mydatabase --compress gzip
 ```
 
 For security, you should use environment variables for passwords:
@@ -225,12 +228,41 @@ dbdump dump -H localhost -u root -d mydb \
   --exclude sessions \
   --exclude cache \
   --exclude-pattern "log_*"
+
+# Use built-in SSH tunneling
+dbdump dump -H 127.0.0.1 -P 3306 -u root -d mydb \
+  --ssh-host bastion.example.com \
+  --ssh-user deploy
 ```
 
 **When to use:**
 - One-off dumps with special requirements
 - Testing different exclude patterns
 - Quick overrides without editing config files
+
+### Compression
+
+The `dump` command supports streaming compression:
+
+- `--compress auto` infers the format from the output path
+- `--compress none` writes plain SQL
+- `--compress gzip` writes gzip-compressed SQL
+- `--compress zstd` writes zstd-compressed SQL
+
+If you do not pass `--output`, the generated filename picks the right extension automatically.
+
+### Built-In SSH Tunneling
+
+You can ask `dbdump` to create and tear down a local SSH tunnel for the run:
+
+```bash
+dbdump dump -H 127.0.0.1 -P 3306 -u root -d mydb \
+  --ssh-host bastion.example.com \
+  --ssh-user deploy \
+  --ssh-key ~/.ssh/id_ed25519
+```
+
+The database host and port flags still describe the MySQL endpoint reachable from the SSH server. The tool forwards that endpoint to a temporary localhost port and uses it for both metadata inspection and `mysqldump`.
 
 ---
 
