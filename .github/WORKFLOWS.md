@@ -156,7 +156,7 @@ Workflows need:
 Edit all workflow files:
 ```yaml
 - name: Set up Go
-  uses: actions/setup-go@v5
+  uses: actions/setup-go@v6
   with:
     go-version: '1.24'  # Update this
 ```
@@ -177,7 +177,7 @@ Edit `test.yml` services section to add/remove MySQL versions.
 
 ### Caching
 
-Go modules are automatically cached by `actions/setup-go@v5` with `cache: true`.
+Go modules are automatically cached by `actions/setup-go@v6` with `cache: true`.
 
 **Typical cache hit:** Saves ~30% of build time
 

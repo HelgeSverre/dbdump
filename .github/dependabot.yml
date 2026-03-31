@@ -17,9 +17,9 @@ updates:
       prefix: "chore(deps)"
       include: "scope"
     reviewers:
-      - "helgesverre"
+      - "HelgeSverre"
     assignees:
-      - "helgesverre"
+      - "HelgeSverre"
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
@@ -36,9 +36,9 @@ updates:
       prefix: "chore(deps)"
       include: "scope"
     reviewers:
-      - "helgesverre"
+      - "HelgeSverre"
     assignees:
-      - "helgesverre"
+      - "HelgeSverre"
 
   # Docker (for docker-compose.yml)
   - package-ecosystem: "docker"

@@ -363,7 +363,7 @@ Configured to scan PR diffs only for performance.
 Go modules are cached automatically:
 
 ```yaml
-- uses: actions/setup-go@v5
+- uses: actions/setup-go@v6
   with:
     go-version: '1.24'
     cache: true  # Enables automatic caching
