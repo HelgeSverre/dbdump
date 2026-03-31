@@ -148,23 +148,28 @@ test_data_integrity() {
         grep -q 'CREATE.*TRIGGER.*after_order_insert' /tmp/test_triggers.sql
     "
     
-    # Test 5: Stored procedures are not currently dumped
-    # NOTE: Disabled due to MySQL 5.7 compatibility issue with INFORMATION_SCHEMA.LIBRARIES
-    # when using newer mysqldump clients (MySQL 8.0+)
-    # run_test "Stored procedures in dump" "
-    #     export DBDUMP_MYSQL_PWD=testpass123
-    #     ./bin/dbdump dump -H 127.0.0.1 -P $port -u root -d testdb --auto -o /tmp/test_procedures.sql
-    #     grep -q 'CREATE.*PROCEDURE.*get_user_orders' /tmp/test_procedures.sql
-    # "
-    
-    # Test 6: No duplicate triggers
+    # Test 5: Stored procedures are intentionally omitted for compatibility
+    run_test "Stored procedures omitted" "
+        export DBDUMP_MYSQL_PWD=testpass123
+        ./bin/dbdump dump -H 127.0.0.1 -P $port -u root -d testdb --auto -o /tmp/test_procedures.sql
+        ! grep -q 'CREATE.*PROCEDURE.*get_user_orders' /tmp/test_procedures.sql
+    "
+
+    # Test 6: Events included in dump
+    run_test "Events in structure dump" "
+        export DBDUMP_MYSQL_PWD=testpass123
+        ./bin/dbdump dump -H 127.0.0.1 -P $port -u root -d testdb --auto -o /tmp/test_events.sql
+        grep -q 'CREATE.*EVENT.*cleanup_old_sessions' /tmp/test_events.sql
+    "
+
+    # Test 7: No duplicate triggers
     run_test "No duplicate triggers" "
         export DBDUMP_MYSQL_PWD=testpass123
         ./bin/dbdump dump -H 127.0.0.1 -P $port -u root -d testdb --auto -o /tmp/test_nodup.sql
         [ \$(grep -c 'CREATE.*TRIGGER.*after_order_insert' /tmp/test_nodup.sql) -eq 1 ]
     "
-    
-    # Test 7: Dump can be restored
+
+    # Test 8: Dump can be restored
     run_test "Dump restoration" "
         export DBDUMP_MYSQL_PWD=testpass123
         ./bin/dbdump dump -H 127.0.0.1 -P $port -u root -d testdb --auto -o /tmp/test_restore.sql
@@ -172,8 +177,10 @@ test_data_integrity() {
         mysql -h 127.0.0.1 -P $port -u root -ptestpass123 testdb_restore < /tmp/test_restore.sql
         users_count=\$(mysql -h 127.0.0.1 -P $port -u root -ptestpass123 -N -e 'SELECT COUNT(*) FROM testdb_restore.users;')
         audits_count=\$(mysql -h 127.0.0.1 -P $port -u root -ptestpass123 -N -e 'SELECT COUNT(*) FROM testdb_restore.audits;')
+        events_count=\$(mysql -h 127.0.0.1 -P $port -u root -ptestpass123 -N -e \"SELECT COUNT(*) FROM information_schema.EVENTS WHERE EVENT_SCHEMA = 'testdb_restore' AND EVENT_NAME = 'cleanup_old_sessions';\")
         [ \"\$users_count\" -gt 0 ]
         [ \"\$audits_count\" -eq 0 ]
+        [ \"\$events_count\" -eq 1 ]
         mysql -h 127.0.0.1 -P $port -u root -ptestpass123 -e 'DROP DATABASE testdb_restore;'
     "
 }

@@ -27,11 +27,11 @@ dbdump supports multiple methods for providing database credentials. Use the mos
 ```bash
 # Preferred: dbdump-specific variable
 export DBDUMP_MYSQL_PWD=yourpassword
-dbdump dump -u root -d mydb
+dbdump dump -H 127.0.0.1 -u root -d mydb
 
 # Alternative: standard MySQL variable (fallback)
 export MYSQL_PWD=yourpassword
-dbdump dump -u root -d mydb
+dbdump dump -H 127.0.0.1 -u root -d mydb
 ```
 
 **Pros:**
@@ -51,7 +51,7 @@ dbdump dump -u root -d mydb
 #### 3. Command-Line Flag (Least Secure)
 
 ```bash
-dbdump dump -u root -p yourpassword -d mydb
+dbdump dump -H 127.0.0.1 -u root -p yourpassword -d mydb
 ```
 
 **WARNING:** Passwords provided as command-line flags may appear in:
@@ -98,8 +98,8 @@ dbdump dump -H 127.0.0.1 -P 3307 -u dbuser -d mydb
 ```
 
 2. **Use TLS/SSL Connections** when available
-   - Note: dbdump currently doesn't support TLS flags directly
-   - Use MySQL config file with SSL parameters
+   - dbdump does not currently expose TLS settings for its direct Go connection or the generated `mysqldump` defaults file
+   - Prefer SSH tunnels or private network paths for remote dumps until explicit TLS support is added
 
 3. **Restrict Database Permissions**:
 ```sql
@@ -175,7 +175,7 @@ If dumping databases with payment card information:
 
 ## Version History
 
-### v1.0.0 (Current - 2024-10-28)
+### v1.1.1 (Current - 2026-03-02)
 - **[SECURITY]** Fixed password exposure in process lists (now uses a temporary defaults file for mysqldump)
 - **[SECURITY]** Dump files created with 0600 permissions
 - **[SECURITY]** Safe DSN construction with proper escaping
@@ -197,4 +197,4 @@ Security improvements based on:
 
 ---
 
-**Last Updated:** 2024-10-28
+**Last Updated:** 2026-03-30

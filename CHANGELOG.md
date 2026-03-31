@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-03-31
+
+### Added
+- **[CLI]** Added configurable seams so `dbdump dump`, `list`, and `config list` can be unit tested and wired through CI.
+- **[Integration]** Added explicit verification for events, event restoration, and commented-on routine handling in the matrix, bringing the total to 14 assertions per database.
+
+### Changed
+- **[Dump]** Switched the `mysqldump` helper to create a temporary `defaults-extra-file` and report feature detection failures instead of silently degrading.
+- **[Docs]** Synced the README, USER-GUIDE, SECURITY, TESTING_GUIDE, release docs, and workflows with current behavior, TLS limitations, and test counts.
+- **[Tests]** Added CLI-wide coverage and expanded integration assertions, raising total tooling coverage to 63.5%.
+
+### Fixed
+- **[Docs]** Updated the sample data generator guidance to describe triggers/events and omit routines intentionally.
+- **[Release]** Hardened changelog, version metadata, and doc instructions so future releases reference the correct tag (now `v1.2.0`).
+
 ## [1.1.1] - 2026-03-02
 
 ### Dependencies

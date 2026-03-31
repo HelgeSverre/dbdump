@@ -202,10 +202,11 @@ BEGIN
 END$$
 DELIMITER ;
 
--- Event example (disabled by default)
--- CREATE EVENT cleanup_old_sessions
--- ON SCHEDULE EVERY 1 DAY
--- DO DELETE FROM sessions WHERE last_activity < UNIX_TIMESTAMP(DATE_SUB(NOW(), INTERVAL 30 DAY));
+-- Event example
+DROP EVENT IF EXISTS cleanup_old_sessions;
+CREATE EVENT cleanup_old_sessions
+ON SCHEDULE EVERY 1 DAY
+DO DELETE FROM sessions WHERE last_activity < UNIX_TIMESTAMP(DATE_SUB(NOW(), INTERVAL 30 DAY));
 
 EOF
 
@@ -389,5 +390,5 @@ echo ""
 echo "Next steps:"
 echo "1. Test dbdump: ./bin/dbdump dump -H $HOST -P $PORT -u root -p $PASSWORD -d $DATABASE --auto"
 echo "2. Verify excluded tables: audits, sessions, cache, telescope_entries"
-echo "3. Verify triggers/procedures are included in structure dump"
+echo "3. Verify triggers/events are included and procedures are omitted in the structure dump"
 echo ""

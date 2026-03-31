@@ -16,6 +16,38 @@ import (
 	"golang.org/x/term"
 )
 
+type inspectionSession interface {
+	Close() error
+}
+
+type tableInspector interface {
+	GetAllTablesInfo() ([]database.TableInfo, error)
+}
+
+type dumpRunner interface {
+	Dump() (*database.DumpResult, error)
+}
+
+var (
+	openInspection = func(conn *database.Connection) (inspectionSession, tableInspector, error) {
+		db, err := conn.Connect()
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return db, database.NewInspector(db), nil
+	}
+	checkMySQLDump    = database.CheckMySQLDump
+	newDumper         = func(opts *database.DumpOptions) dumpRunner { return database.NewDumper(opts) }
+	runTableSelection = ui.RunInteractiveSelection
+	isTerminal        = func(fd int) bool { return term.IsTerminal(fd) }
+	nowTime           = time.Now
+	printError        = ui.PrintError
+	printInfo         = ui.PrintInfo
+	printSuccess      = ui.PrintSuccess
+	printSummary      = ui.PrintSummary
+)
+
 type connectionFlags struct {
 	Host     string
 	Port     int
@@ -121,21 +153,20 @@ func runDump(connFlags connectionFlags, opts dumpFlags) error {
 	}
 
 	conn := connFlags.toConnection()
-	db, err := conn.Connect()
+	session, inspector, err := openInspection(conn)
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
-	defer closeDB(db)
+	defer closeDB(session)
 
-	ui.PrintSuccess("Connected to database")
+	printSuccess("Connected to database")
 
-	inspector := database.NewInspector(db)
 	tablesInfo, err := inspector.GetAllTablesInfo()
 	if err != nil {
 		return fmt.Errorf("failed to get table information: %w", err)
 	}
 
-	ui.PrintInfo(fmt.Sprintf("Found %d tables", len(tablesInfo)))
+	printInfo(fmt.Sprintf("Found %d tables", len(tablesInfo)))
 
 	excludeConfig, err := buildExcludeConfig(opts)
 	if err != nil {
@@ -152,7 +183,7 @@ func runDump(connFlags connectionFlags, opts dumpFlags) error {
 	finalExcludes, err := resolveExcludes(tablesInfo, preSelected, opts.AutoMode)
 	if err != nil {
 		if errors.Is(err, ui.ErrSelectionCancelled) {
-			ui.PrintInfo("Dump cancelled")
+			printInfo("Dump cancelled")
 			return nil
 		}
 		return err
@@ -172,13 +203,13 @@ func runDump(connFlags connectionFlags, opts dumpFlags) error {
 		return nil
 	}
 
-	if err := database.CheckMySQLDump(); err != nil {
-		return fmt.Errorf("mysqldump is required but not found in PATH")
+	if err := checkMySQLDump(); err != nil {
+		return fmt.Errorf("mysqldump is required but not found in PATH: %w", err)
 	}
 
-	ui.PrintInfo(fmt.Sprintf("Starting dump to %s", outputPath))
+	printInfo(fmt.Sprintf("Starting dump to %s", outputPath))
 
-	dumper := database.NewDumper(&database.DumpOptions{
+	dumper := newDumper(&database.DumpOptions{
 		Connection:    conn,
 		ExcludeTables: finalExcludes,
 		OutputFile:    outputPath,
@@ -187,11 +218,11 @@ func runDump(connFlags connectionFlags, opts dumpFlags) error {
 
 	result, err := dumper.Dump()
 	if err != nil {
-		ui.PrintError(err)
+		printError(err)
 		return err
 	}
 
-	ui.PrintSummary(result.OutputFile, len(result.ExcludedTables), result.Duration, result.FileSizeDisplay)
+	printSummary(result.OutputFile, len(result.ExcludedTables), result.Duration, result.FileSizeDisplay)
 	return nil
 }
 
@@ -202,13 +233,12 @@ func runList(connFlags connectionFlags) error {
 	}
 
 	conn := connFlags.toConnection()
-	db, err := conn.Connect()
+	session, inspector, err := openInspection(conn)
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
-	defer closeDB(db)
+	defer closeDB(session)
 
-	inspector := database.NewInspector(db)
 	tablesInfo, err := inspector.GetAllTablesInfo()
 	if err != nil {
 		return fmt.Errorf("failed to get table information: %w", err)
@@ -331,15 +361,15 @@ func resolveExcludes(tables []database.TableInfo, preSelected []string, autoMode
 	}
 
 	if len(tables) == 0 {
-		ui.PrintInfo("No tables found; skipping interactive selection")
+		printInfo("No tables found; skipping interactive selection")
 		return nil, nil
 	}
 
-	if !term.IsTerminal(int(os.Stdin.Fd())) || !term.IsTerminal(int(os.Stdout.Fd())) {
+	if !isTerminal(int(os.Stdin.Fd())) || !isTerminal(int(os.Stdout.Fd())) {
 		return nil, fmt.Errorf("interactive mode requires a TTY; rerun with --auto")
 	}
 
-	selected, err := ui.RunInteractiveSelection(tables, preSelected)
+	selected, err := runTableSelection(tables, preSelected)
 	if err != nil {
 		return nil, fmt.Errorf("interactive selection failed: %w", err)
 	}
@@ -350,7 +380,7 @@ func resolveExcludes(tables []database.TableInfo, preSelected []string, autoMode
 func resolveOutputPath(databaseName, configuredPath string) (string, error) {
 	outputPath := configuredPath
 	if outputPath == "" {
-		timestamp := time.Now().Format("20060102_150405")
+		timestamp := nowTime().Format("20060102_150405")
 		outputPath = fmt.Sprintf("%s_%s.sql", databaseName, timestamp)
 	}
 

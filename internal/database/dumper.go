@@ -345,6 +345,10 @@ func getMySQLDumpFeatures() (mysqlDumpFeatureSet, error) {
 		cmd := execCommand("mysqldump", "--help")
 		output, err := cmd.CombinedOutput()
 		if err != nil {
+			mysqlDumpFeaturesErr = fmt.Errorf("failed to inspect mysqldump features: %w", err)
+			if len(output) > 0 {
+				mysqlDumpFeaturesErr = fmt.Errorf("%w: %s", mysqlDumpFeaturesErr, strings.TrimSpace(string(output)))
+			}
 			return
 		}
 

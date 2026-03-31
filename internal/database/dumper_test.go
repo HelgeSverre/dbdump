@@ -191,6 +191,28 @@ func TestDumpReplacesExistingOutputViaFallbackPath(t *testing.T) {
 	}
 }
 
+func TestGetMySQLDumpFeaturesReturnsHelpError(t *testing.T) {
+	t.Helper()
+
+	oldExecCommand := execCommand
+	resetMySQLDumpFeatures()
+	execCommand = func(name string, args ...string) *exec.Cmd {
+		return exec.Command("sh", "-c", "echo 'help failed' >&2; exit 1")
+	}
+	t.Cleanup(func() {
+		execCommand = oldExecCommand
+		resetMySQLDumpFeatures()
+	})
+
+	_, err := getMySQLDumpFeatures()
+	if err == nil {
+		t.Fatal("expected getMySQLDumpFeatures to return an error")
+	}
+	if !strings.Contains(err.Error(), "failed to inspect mysqldump features") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func stubMySQLDump(t *testing.T, run func(context.Context, string, ...string) *exec.Cmd) func() {
 	t.Helper()
 

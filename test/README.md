@@ -84,6 +84,7 @@ docker compose down -v
 **Database features:**
 - Stored procedure fixture: `get_user_orders` (not currently included in dumps)
 - Trigger: `after_order_insert` (creates audit log on order insert)
+- Event: `cleanup_old_sessions` (should be included in dumps)
 - Foreign keys between tables
 - Indexes on common columns
 
@@ -124,7 +125,8 @@ TEST_QUICK=1 ./test/integration-test.sh
 
 #### Data Integrity Tests
 - ✓ Triggers included in structure dump
-- ✓ Stored procedure fixture exists, but routines are currently not dumped
+- ✓ Stored procedures are intentionally omitted for compatibility
+- ✓ Events included in structure dump
 - ✓ No duplicate triggers
 - ✓ Dumps can be restored successfully
 
@@ -160,8 +162,8 @@ Testing against: mysql80 (port 3308)
 ========================================
 Test Results
 ========================================
-Tests Run:    52
-Tests Passed: 52
+Tests Run:    56
+Tests Passed: 56
 Tests Failed: 0
 ========================================
 
@@ -202,7 +204,10 @@ export DBDUMP_MYSQL_PWD=testpass123
 # Check for triggers
 grep -i "CREATE TRIGGER" test_dump.sql
 
-# Procedures are currently not included by the dump path
+# Procedures are intentionally not included by the dump path
+
+# Events should be included
+grep -i "CREATE EVENT" test_dump.sql
 
 # Count trigger occurrences (should be 1)
 grep -c "after_order_insert" test_dump.sql
@@ -214,6 +219,7 @@ mysql -h 127.0.0.1 -P 3308 -u root -ptestpass123 test_restore < test_dump.sql
 # Verify restoration
 mysql -h 127.0.0.1 -P 3308 -u root -ptestpass123 test_restore -e "SHOW TABLES;"
 mysql -h 127.0.0.1 -P 3308 -u root -ptestpass123 test_restore -e "SHOW TRIGGERS;"
+mysql -h 127.0.0.1 -P 3308 -u root -ptestpass123 test_restore -e "SHOW EVENTS;"
 mysql -h 127.0.0.1 -P 3308 -u root -ptestpass123 test_restore -e "SHOW PROCEDURE STATUS WHERE Db = 'test_restore';"
 
 # Cleanup

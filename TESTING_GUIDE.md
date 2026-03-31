@@ -225,8 +225,8 @@ Tests Failed: 0
 ========================================
 Test Results
 ========================================
-Tests Run:    52
-Tests Passed: 52
+Tests Run:    56
+Tests Passed: 56
 Tests Failed: 0
 ========================================
 
@@ -355,23 +355,25 @@ The implementation detects supported flags from `mysqldump --help` and only appl
 5. ✓ Code doesn't use `-p<password>` pattern
 6. ✓ Code uses temporary defaults-extra-file auth
 
-### Integration Tests (12 tests × 4 databases = 48 tests)
+### Integration Tests (14 tests × 4 databases = 56 tests)
 
 **Per Database:**
 1. ✓ Password not in process list
 2. ✓ Dump file permissions 0600
 3. ✓ Special characters in password work
 4. ✓ Triggers in structure dump
-5. ✓ No duplicate triggers
-6. ✓ Dump can be restored
-7. ✓ Audits table structure preserved
-8. ✓ Audits data excluded
-9. ✓ Users data included
-10. ✓ List command works
-11. ✓ Dry run mode works
-12. ✓ Custom output file works
+5. ✓ Stored procedures intentionally omitted
+6. ✓ Events in structure dump
+7. ✓ No duplicate triggers
+8. ✓ Dump can be restored
+9. ✓ Audits table structure preserved
+10. ✓ Audits data excluded
+11. ✓ Users data included
+12. ✓ List command works
+13. ✓ Dry run mode works
+14. ✓ Custom output file works
 
-> **Note:** Stored procedures are created in the fixture, but the dump path currently does not include routines, so the procedure assertion remains disabled.
+> **Note:** Stored procedures are created in the fixture, but the dump path intentionally omits routines for cross-version compatibility.
 
 **Databases Tested:**
 - MySQL 5.7 (port 3307)

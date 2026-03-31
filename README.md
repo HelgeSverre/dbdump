@@ -370,8 +370,9 @@ ps aux | grep dbdump  # Should NOT show password
 # Verify file permissions (should be 0600)
 ls -la testdb_*.sql
 
-# Test data integrity (triggers only; routines are currently disabled)
+# Test data integrity (triggers and events are included; routines are intentionally omitted)
 grep -i "CREATE TRIGGER" testdb_*.sql
+grep -i "CREATE EVENT" testdb_*.sql
 ```
 
 ### Project Structure
