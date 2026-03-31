@@ -12,7 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **[Connectivity]** Added optional SSH tunnel support via `--ssh-host`, `--ssh-port`, `--ssh-user`, `--ssh-key`, and `--ssh-local-port` for both inspection and dumping.
 
 ### Changed
-- **[Docs]** Updated roadmap and version references to the current `v1.2.x` release line.
+- **[Docs]** Updated the roadmap, changelog links, README, guides, and website docs to the current `v1.2.x` release line and the new dump features.
+- **[Verification]** Live end-to-end checks now cover gzip and zstd dump creation/restoration plus SSH-tunneled dumps against Docker-backed services.
 
 ## [1.2.0] - 2026-03-31
 

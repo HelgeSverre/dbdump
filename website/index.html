@@ -265,6 +265,15 @@ dbdump dump -H localhost -u root -d mydb --auto
 # Custom output file
 dbdump dump -H localhost -u root -d mydb -o backup.sql
 
+# Gzip-compressed output
+dbdump dump -H localhost -u root -d mydb --auto --compress gzip
+
+# Dump through an SSH bastion
+dbdump dump -H mysql80 -P 3306 -u root -d mydb \
+  --ssh-host bastion.example.com \
+  --ssh-user deploy \
+  --auto
+
 # Dry run (preview what will be excluded)
 dbdump dump -H localhost -u root -d mydb --dry-run</code></pre>
                     <button class="copy-btn" data-copy="dbdump dump -H localhost -u root -d mydb --auto">Copy</button>
@@ -310,8 +319,45 @@ dbdump dump -H localhost -u root -d mydb --dry-run</code></pre>
                         <tr><td><code>--exclude-pattern</code></td><td>Exclude tables matching pattern (can be used multiple times)</td></tr>
                         <tr><td><code>--auto</code></td><td>Use smart defaults without interaction</td></tr>
                         <tr><td><code>--dry-run</code></td><td>Show what would be excluded without dumping</td></tr>
+                        <tr><td><code>--compress</code></td><td>Compression format: <code>auto</code>, <code>none</code>, <code>gzip</code>, or <code>zstd</code></td></tr>
+                        <tr><td><code>--ssh-host</code></td><td>SSH bastion host for built-in tunneling</td></tr>
+                        <tr><td><code>--ssh-port</code></td><td>SSH bastion port (default: <code>22</code>)</td></tr>
+                        <tr><td><code>--ssh-user</code></td><td>SSH username (defaults to the database user)</td></tr>
+                        <tr><td><code>--ssh-key</code></td><td>SSH private key path</td></tr>
+                        <tr><td><code>--ssh-local-port</code></td><td>Local tunnel port (default: auto-selected)</td></tr>
                     </tbody>
                 </table>
+            </article>
+
+            <article class="guide-section">
+                <h3>Compression</h3>
+                <p>dbdump can stream output as plain SQL, gzip, or zstd without writing an uncompressed intermediate file first.</p>
+                <div class="code-block">
+                    <pre><code># Infer from filename
+dbdump dump -H localhost -u root -d mydb -o backup.sql.gz
+
+# Force gzip
+dbdump dump -H localhost -u root -d mydb --auto --compress gzip
+
+# Force zstd
+dbdump dump -H localhost -u root -d mydb --auto --compress zstd</code></pre>
+                    <button class="copy-btn" data-copy="dbdump dump -H localhost -u root -d mydb --auto --compress gzip">Copy</button>
+                </div>
+                <p class="note">If you omit <code>--output</code>, dbdump picks the matching default extension automatically.</p>
+            </article>
+
+            <article class="guide-section">
+                <h3>SSH Tunneling</h3>
+                <p>dbdump can create and tear down a local SSH tunnel for the run, so you do not need to start <code>ssh -L ...</code> separately.</p>
+                <div class="code-block">
+                    <pre><code>dbdump dump -H mysql80 -P 3306 -u root -d mydb \
+  --ssh-host bastion.example.com \
+  --ssh-user deploy \
+  --ssh-key ~/.ssh/id_ed25519 \
+  --auto</code></pre>
+                    <button class="copy-btn" data-copy="dbdump dump -H mysql80 -P 3306 -u root -d mydb --ssh-host bastion.example.com --ssh-user deploy --ssh-key ~/.ssh/id_ed25519 --auto">Copy</button>
+                </div>
+                <p class="note">When SSH tunneling is enabled, <code>--host</code> and <code>--port</code> still refer to the MySQL endpoint as seen from the SSH server.</p>
             </article>
 
             <!-- Excluding Tables -->
@@ -458,10 +504,28 @@ dbdump dump -H localhost -u root -d mydb --dry-run   # Preview exclusions</code>
                     <button class="copy-btn" data-copy="dbdump dump -H localhost -u root -d laravel_db --exclude jobs --exclude notifications --exclude password_resets --auto">Copy</button>
                 </div>
 
+                <h4>Remote dump over SSH with gzip output</h4>
+                <div class="code-block">
+                    <pre><code>dbdump dump -H mysql80 -P 3306 -u root -d mydb \
+  --ssh-host bastion.example.com \
+  --ssh-user deploy \
+  --ssh-key ~/.ssh/id_ed25519 \
+  --compress gzip \
+  --auto</code></pre>
+                    <button class="copy-btn" data-copy="dbdump dump -H mysql80 -P 3306 -u root -d mydb --ssh-host bastion.example.com --ssh-user deploy --ssh-key ~/.ssh/id_ed25519 --compress gzip --auto">Copy</button>
+                </div>
+
                 <h4>Restore a dump</h4>
                 <div class="code-block">
-                    <pre><code>mysql -u root -p mydb < dump_file.sql</code></pre>
-                    <button class="copy-btn" data-copy="mysql -u root -p mydb < dump_file.sql">Copy</button>
+                    <pre><code># Plain SQL
+mysql -u root -p mydb < dump_file.sql
+
+# Gzip-compressed
+gzip -dc dump_file.sql.gz | mysql -u root -p mydb
+
+# Zstd-compressed
+zstd -dc dump_file.sql.zst | mysql -u root -p mydb</code></pre>
+                    <button class="copy-btn" data-copy="gzip -dc dump_file.sql.gz | mysql -u root -p mydb">Copy</button>
                 </div>
             </article>
 
@@ -485,6 +549,13 @@ dbdump dump -H localhost -u root -d mydb --dry-run   # Preview exclusions</code>
                             <li>Host, port, user, password are correct</li>
                             <li>User has SELECT, SHOW VIEW, TRIGGER, LOCK TABLES permissions</li>
                         </ul>
+                    </div>
+                </details>
+
+                <details>
+                    <summary>SSH tunnel fails before connecting</summary>
+                    <div class="details-content">
+                        <p>Check that the SSH host is reachable, your key is valid, and the bastion allows local port forwarding. The first connection may also require a host-key trust prompt unless the host is already in <code>known_hosts</code>.</p>
                     </div>
                 </details>
 
