@@ -1,100 +1,53 @@
 # Claude AI Assistant Notes
 
-This file contains preferences and conventions for working with Claude AI on this project.
+This file keeps durable project preferences for Claude-oriented workflows. Avoid storing volatile facts here when they can drift from the codebase.
 
-## Release Management
+## Working Style
 
-### GitHub Release Naming
-- **Release titles**: Use simple version format `vX.X.X` (e.g., `v1.0.1`)
-- **DO NOT** add prefixes like "Release v1.0.1" or suffixes
-- **DO NOT** add descriptive text in the title (save for the release notes body)
+- Explore the code, tests, docs, and recent repo state before changing behavior.
+- For non-trivial work, break execution into numbered tasks with explicit verification.
+- Prefer tests first for risky behavior changes, CLI changes, compatibility fixes, and bug work.
+- After the main fix, do a separate pass for edge cases and failure cleanup.
+- Treat docs, changelog, and release automation as part of completion.
 
-### Release Notes Format
-- Extract relevant sections from CHANGELOG.md
-- Format as clear Markdown with proper headings
-- Include "Full Changelog" link comparing previous version
-- Organize by categories: Security, Fixed, Added, Changed, Performance, Documentation
+## Code Preferences
 
-Example structure:
-```markdown
-## Fixed
-- Clear, concise bullet points
+- Check cleanup errors for `Close()`, `Flush()`, and similar operations.
+- Use `defer func()` when cleanup needs error handling or logging.
+- Prefer `DBDUMP_MYSQL_PWD` in docs, but document compatibility behavior when other credential paths exist.
 
-## Added
-- New features
+## Documentation Preferences
 
----
+- Verify docs against source code, scripts, workflows, and tests rather than updating from memory.
+- Prefer `docker compose` syntax in user-facing docs.
+- Only reference files that actually exist.
+- Remove stale or aspirational statements when behavior is not implemented.
 
-**Full Changelog**: https://github.com/user/repo/compare/v1.0.0...v1.0.1
-```
+## Review Preferences
 
-## Code Style
+When auditing changes, cover:
 
-### Error Handling
-- All `Close()`, `Flush()`, and similar cleanup operations must check errors
-- Use `defer func()` pattern with error checking for cleanup operations
-- Log warnings to stderr for non-critical cleanup failures
+1. implementation correctness
+2. test gaps and fragile tests
+3. documentation accuracy
+4. CI/CD and release drift
+5. edge cases and recovery behavior
 
-Example:
-```go
-defer func() {
-    if err := db.Close(); err != nil {
-        fmt.Fprintf(os.Stderr, "Warning: failed to close database connection: %v\n", err)
-    }
-}()
-```
+Prefer severity-ordered findings with file references.
 
-### Environment Variables
-- Prefer `DBDUMP_MYSQL_PWD` over `MYSQL_PWD` in documentation
-- Document both for backward compatibility
-- Always emphasize environment variables over command-line password flags
+## Commit and Release Preferences
 
-## Documentation
+- Prefer conventional commit prefixes: `feat`, `fix`, `docs`, `test`, `refactor`, `ci`, `chore`
+- Keep commits atomic by intent
+- Use plain version tags and release titles in the form `vX.Y.Z`
+- Keep `CHANGELOG.md` aligned with the actual shipped changes before tagging
 
-### Commands
-- Use `docker compose` (not `docker-compose`) for newer Docker CLI
-- Use Go `1.23+` as minimum version requirement
-- Keep dates in format `YYYY-MM-DD` (e.g., `2024-10-28`)
+## Testing Preferences
 
-### File References
-- Only reference files that actually exist
-- Remove links to planned/future documentation files
-- Keep documentation in sync with actual codebase
+- Test scripts should remain portable across macOS and Linux where practical.
+- Prefer targeted verification first, then broader suite coverage before finishing.
+- Do not treat a change as done if only the happy path was exercised.
 
-## Git Workflow
+## Reference
 
-### Commit Messages
-- Follow conventional commits format: `type: description`
-- Types: `feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `ci`
-- Include detailed body for significant changes
-- Always add Claude Code attribution footer
-
-### CI/CD Considerations
-- Integration tests detect CI environment via `CI` env var
-- Tests skip Docker Compose startup when running in GitHub Actions
-- Use portable commands (e.g., `ls -l` for permissions instead of `stat`)
-
-## Testing
-
-### Test Scripts
-- Must work on both macOS and Linux
-- Use bash 3.2 compatible syntax (macOS default)
-- Avoid platform-specific commands or provide fallbacks
-
-### Integration Tests
-- Run against MySQL 5.7, 8.0, 8.4, and MariaDB 10.11
-- Security tests verify password hiding and file permissions
-- Data integrity tests ensure triggers, procedures, and restoration work
-
-## Project Preferences
-
-### Changelog Maintenance
-- Keep [Unreleased] section for work in progress
-- Move to versioned section when releasing
-- Include both functional and documentation changes
-- Use semantic versioning (MAJOR.MINOR.PATCH)
-
----
-
-**Last Updated**: 2024-10-28
-**Maintained by**: Helge Sverre with Claude Code assistance
+For the fuller tool-agnostic workflow, see `AGENTS.md`.
