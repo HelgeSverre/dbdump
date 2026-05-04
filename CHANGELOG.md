@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-05-04
+
 ### Added
 - **[Dump]** Added streaming dump compression with `--compress auto|none|gzip|zstd`, including extension-based inference and compressed default output names.
 - **[Connectivity]** Added optional SSH tunnel support via `--ssh-host`, `--ssh-port`, `--ssh-user`, `--ssh-key`, and `--ssh-local-port` for both inspection and dumping.
@@ -14,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **[Docs]** Updated the roadmap, changelog links, README, guides, and website docs to the current `v1.2.x` release line and the new dump features.
 - **[Verification]** Live end-to-end checks now cover gzip and zstd dump creation/restoration plus SSH-tunneled dumps against Docker-backed services.
+
+### Dependencies
+- Bumped `github.com/go-sql-driver/mysql` from 1.9.3 to 1.10.0
+- Bumped `github.com/klauspost/compress` from 1.18.5 to 1.18.6
+- Bumped CI to Go 1.26 and refreshed indirect Go module graph
 
 ## [1.2.0] - 2026-03-31
 
