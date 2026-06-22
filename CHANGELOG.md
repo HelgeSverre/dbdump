@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-06-23
+
+### Dependencies
+- Bumped `golang.org/x/term` from 0.42.0 to 0.44.0 (and indirect `golang.org/x/sys` to 0.46.0)
+- Bumped `actions/checkout` from 6 to 7 in CI workflows
+- Bumped `codecov/codecov-action` from 6 to 7 in CI workflows
+
 ## [1.3.0] - 2026-05-04
 
 ### Added
@@ -314,7 +321,9 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ---
 
 <!-- Version comparison links -->
-[Unreleased]: https://github.com/helgesverre/dbdump/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/helgesverre/dbdump/compare/v1.3.1...HEAD
+[1.3.1]: https://github.com/helgesverre/dbdump/compare/v1.3.0...v1.3.1
+[1.3.0]: https://github.com/helgesverre/dbdump/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/helgesverre/dbdump/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/helgesverre/dbdump/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/helgesverre/dbdump/compare/v1.0.1...v1.1.0
