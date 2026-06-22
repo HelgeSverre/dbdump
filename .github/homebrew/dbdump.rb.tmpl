@@ -1,0 +1,37 @@
+class Dbdump < Formula
+  desc "Intelligent MySQL database dumping tool"
+  homepage "https://github.com/helgesverre/dbdump"
+  version "__VERSION_NUMBER__"
+  license "MIT"
+
+  if OS.mac?
+    if Hardware::CPU.arm?
+      url "https://github.com/helgesverre/dbdump/releases/download/__VERSION__/dbdump-__VERSION__-darwin-arm64.tar.gz"
+      sha256 "__DARWIN_ARM64__"
+    end
+    if Hardware::CPU.intel?
+      url "https://github.com/helgesverre/dbdump/releases/download/__VERSION__/dbdump-__VERSION__-darwin-amd64.tar.gz"
+      sha256 "__DARWIN_AMD64__"
+    end
+  end
+  if OS.linux?
+    if Hardware::CPU.arm?
+      url "https://github.com/helgesverre/dbdump/releases/download/__VERSION__/dbdump-__VERSION__-linux-arm64.tar.gz"
+      sha256 "__LINUX_ARM64__"
+    end
+    if Hardware::CPU.intel?
+      url "https://github.com/helgesverre/dbdump/releases/download/__VERSION__/dbdump-__VERSION__-linux-amd64.tar.gz"
+      sha256 "__LINUX_AMD64__"
+    end
+  end
+
+  def install
+    os = OS.mac? ? "darwin" : "linux"
+    arch = Hardware::CPU.arm? ? "arm64" : "amd64"
+    bin.install "dbdump-#{os}-#{arch}" => "dbdump"
+  end
+
+  test do
+    assert_match "dbdump is a CLI tool for intelligent MySQL database dumping", shell_output("#{bin}/dbdump --help")
+  end
+end

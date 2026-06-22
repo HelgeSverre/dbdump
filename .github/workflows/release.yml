@@ -225,3 +225,99 @@ jobs:
             chmod +x dbdump-${{ matrix.artifact }}
             ./dbdump-${{ matrix.artifact }} --help
           fi
+
+  # Publish/update the Homebrew formula in helgesverre/homebrew-tap.
+  # Requires a HOMEBREW_TAP_TOKEN secret: a PAT (or fine-grained token) with
+  # contents:write on helgesverre/homebrew-tap. Skipped automatically if the
+  # secret is absent (e.g. on forks).
+  homebrew:
+    name: Update Homebrew Formula
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for tap token
+        id: gate
+        run: |
+          if [ -n "${{ secrets.HOMEBREW_TAP_TOKEN }}" ]; then
+            echo "enabled=true" >> $GITHUB_OUTPUT
+          else
+            echo "enabled=false" >> $GITHUB_OUTPUT
+            echo "::notice::HOMEBREW_TAP_TOKEN not set; skipping Homebrew formula update."
+          fi
+
+      - name: Checkout dbdump (for formula template)
+        if: steps.gate.outputs.enabled == 'true'
+        uses: actions/checkout@v7
+
+      - name: Get version
+        if: steps.gate.outputs.enabled == 'true'
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Download release artifacts
+        if: steps.gate.outputs.enabled == 'true'
+        uses: actions/download-artifact@v8
+        with:
+          name: release-binaries
+          path: ./release-files
+
+      - name: Compute checksums
+        if: steps.gate.outputs.enabled == 'true'
+        id: sha
+        run: |
+          cd release-files
+          V="${{ steps.get_version.outputs.VERSION }}"
+          {
+            echo "darwin_arm64=$(sha256sum "dbdump-$V-darwin-arm64.tar.gz" | cut -d' ' -f1)"
+            echo "darwin_amd64=$(sha256sum "dbdump-$V-darwin-amd64.tar.gz" | cut -d' ' -f1)"
+            echo "linux_arm64=$(sha256sum "dbdump-$V-linux-arm64.tar.gz" | cut -d' ' -f1)"
+            echo "linux_amd64=$(sha256sum "dbdump-$V-linux-amd64.tar.gz" | cut -d' ' -f1)"
+          } >> $GITHUB_OUTPUT
+
+      - name: Checkout tap
+        if: steps.gate.outputs.enabled == 'true'
+        uses: actions/checkout@v7
+        with:
+          repository: helgesverre/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: tap
+
+      - name: Render formula
+        if: steps.gate.outputs.enabled == 'true'
+        env:
+          VERSION: ${{ steps.get_version.outputs.VERSION }}
+          DARWIN_ARM64: ${{ steps.sha.outputs.darwin_arm64 }}
+          DARWIN_AMD64: ${{ steps.sha.outputs.darwin_amd64 }}
+          LINUX_ARM64: ${{ steps.sha.outputs.linux_arm64 }}
+          LINUX_AMD64: ${{ steps.sha.outputs.linux_amd64 }}
+        run: |
+          VERSION_NUMBER="${VERSION#v}"
+          sed \
+            -e "s|__VERSION_NUMBER__|${VERSION_NUMBER}|g" \
+            -e "s|__VERSION__|${VERSION}|g" \
+            -e "s|__DARWIN_ARM64__|${DARWIN_ARM64}|g" \
+            -e "s|__DARWIN_AMD64__|${DARWIN_AMD64}|g" \
+            -e "s|__LINUX_ARM64__|${LINUX_ARM64}|g" \
+            -e "s|__LINUX_AMD64__|${LINUX_AMD64}|g" \
+            .github/homebrew/dbdump.rb.tmpl > tap/Formula/dbdump.rb
+          echo "Rendered formula:"
+          cat tap/Formula/dbdump.rb
+
+      - name: Commit and push formula
+        if: steps.gate.outputs.enabled == 'true'
+        run: |
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Formula/dbdump.rb
+          if git diff --cached --quiet; then
+            echo "Formula already up to date; nothing to commit."
+          else
+            git commit -m "dbdump ${{ steps.get_version.outputs.VERSION }}"
+            git push
+          fi
