@@ -27,6 +27,14 @@ cache records. These tables can make dumps take hours and consume gigabytes of s
 
 ## Installation
 
+### Using Homebrew
+
+```bash
+brew install helgesverre/tap/dbdump
+```
+
+Upgrade later with `brew upgrade helgesverre/tap/dbdump`. Available for macOS and Linux (Intel and Apple Silicon / ARM64).
+
 ### Using Go
 
 If you have Go 1.24+ installed:
