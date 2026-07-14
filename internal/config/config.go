@@ -1,12 +1,30 @@
 package config
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
 	"gopkg.in/yaml.v3"
 )
+
+// strictUnmarshal decodes YAML into out, rejecting unknown or misplaced keys so a
+// typo (e.g. "excludes" instead of "exclude") surfaces as an error instead of
+// silently producing an empty value. An empty document leaves out at its zero value.
+func strictUnmarshal(data []byte, out any) error {
+	decoder := yaml.NewDecoder(bytes.NewReader(data))
+	decoder.KnownFields(true)
+	if err := decoder.Decode(out); err != nil {
+		if errors.Is(err, io.EOF) {
+			return nil
+		}
+		return err
+	}
+	return nil
+}
 
 // Default configuration as embedded constant
 const defaultConfigYAML = `default_excludes:
@@ -63,7 +81,7 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	var config Config
-	if err := yaml.Unmarshal(data, &config); err != nil {
+	if err := strictUnmarshal(data, &config); err != nil {
 		return nil, fmt.Errorf("failed to parse config file: %w", err)
 	}
 
@@ -98,12 +116,12 @@ func MergeExcludes(defaults *DefaultConfig, project *Config) ExcludeConfig {
 
 // UniqueStrings removes duplicate strings from a slice while preserving order.
 func UniqueStrings(input []string) []string {
-	seen := make(map[string]bool)
+	seen := make(map[string]struct{})
 	result := make([]string, 0)
 
 	for _, str := range input {
-		if !seen[str] {
-			seen[str] = true
+		if _, ok := seen[str]; !ok {
+			seen[str] = struct{}{}
 			result = append(result, str)
 		}
 	}

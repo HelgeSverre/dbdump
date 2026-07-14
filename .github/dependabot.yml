@@ -40,9 +40,9 @@ updates:
     assignees:
       - "HelgeSverre"
 
-  # Docker (for docker-compose.yml)
+  # Docker (for docker/docker-compose*.yml)
   - package-ecosystem: "docker"
-    directory: "/"
+    directory: "/docker"
     schedule:
       interval: "weekly"
       day: "monday"

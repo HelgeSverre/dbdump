@@ -1,0 +1,51 @@
+# TLS-enabled database servers for exercising dbdump's --tls-* flags.
+# Run docker/certs/gen-certs.sh first to create ./certs/*.pem.
+# Both servers enforce require_secure_transport, so a plaintext connection is
+# rejected (which the smoke test relies on to prove TLS is actually in effect).
+services:
+  mysql80-tls:
+    image: mysql:8.0
+    platform: linux/amd64
+    container_name: dbdump-mysql80-tls
+    environment:
+      MYSQL_ROOT_PASSWORD: testpass123
+      MYSQL_DATABASE: testdb
+    ports:
+      - "3320:3306"
+    volumes:
+      - ./certs:/certs:ro
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --default-authentication-plugin=mysql_native_password
+      --ssl-ca=/certs/ca.pem
+      --ssl-cert=/certs/server-cert.pem
+      --ssl-key=/certs/server-key.pem
+      --require-secure-transport=ON
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ptestpass123"]
+      timeout: 5s
+      retries: 15
+
+  mariadb-tls:
+    image: mariadb:10.11
+    platform: linux/amd64
+    container_name: dbdump-mariadb-tls
+    environment:
+      MYSQL_ROOT_PASSWORD: testpass123
+      MYSQL_DATABASE: testdb
+    ports:
+      - "3321:3306"
+    volumes:
+      - ./certs:/certs:ro
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --ssl-ca=/certs/ca.pem
+      --ssl-cert=/certs/server-cert.pem
+      --ssl-key=/certs/server-key.pem
+      --require-secure-transport=ON
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      timeout: 5s
+      retries: 15

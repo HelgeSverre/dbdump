@@ -295,13 +295,13 @@ docker compose version
 
 ```bash
 # Check if containers are running
-docker compose ps
+docker compose -f docker/docker-compose.yml ps
 
 # Check if ports are accessible
 nc -zv 127.0.0.1 3308
 
 # View container logs
-docker compose logs mysql80
+docker compose -f docker/docker-compose.yml logs mysql80
 
 # Restart containers
 just test-docker-clean
@@ -461,7 +461,6 @@ The generated test data includes:
 ## Further Reading
 
 - [test/README.md](test/README.md) - Detailed testing documentation
-- [SECURITY.md](SECURITY.md) - Security best practices
 
 ---
 

@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-07-14
+
+### Added
+- **[CLI]** Added a `version` subcommand and `--version` flag. Release builds stamp the version via ldflags; other builds autopopulate from Go's embedded build info (module version for `go install ...@vX.Y.Z`, VCS commit/time for local builds).
+- **[Connectivity]** Added TLS/SSL support via `--tls-mode` (disabled/preferred/require/verify-ca/verify-identity), `--tls-ca`, `--tls-cert`, `--tls-key`, `--tls-skip-verify`, and `--tls-server-name`. Applies to both dbdump's inspection connection and the `mysqldump` subprocess (with a MariaDB `--ssl` fallback), and the settings persist in connection profiles. With no `--tls-*` flag, behavior is unchanged.
+- **[Dump]** `--dry-run` now prints the full plan: each table's size and row count, whether its data will be dumped or only its structure preserved, totals, and the resolved output path/compression — instead of just the excluded-table list.
+- **[Profiles]** Implemented connection profiles end to end: `dbdump config add <name>` saves the current connection flags, `dbdump config remove <name>` deletes a profile, and `--profile <name>` loads a saved profile for `dump`/`list`. Explicit flags override profile values; the password falls back to `DBDUMP_MYSQL_PWD`/`MYSQL_PWD` when unset. The profiles file is written with 0600 permissions.
+
+### Fixed
+- **[Connectivity]** Fixed an indefinite hang when the SSH tunnel process exited before becoming ready (bad key, DNS failure, `ExitOnForwardFailure`): tunnel shutdown no longer deadlocks and the underlying error is surfaced. Also fixed a data race on the ssh stderr buffer.
+- **[CLI]** An external `SIGTERM`/`SIGINT` (or kill) during interactive table selection now cancels the dump instead of proceeding with a full one; a selection is honored only when explicitly confirmed with Enter.
+- **[Exclusions]** A malformed exclude glob (e.g. `secrets[0-9`) is now rejected up front instead of silently un-excluding the table.
+- **[Config]** Config files are decoded strictly: an unknown or misspelled key (e.g. `excludes:`) now errors instead of silently dropping the user's excludes.
+- **[CLI]** The `--compress` value and `mysqldump` availability are validated before interactive selection, so invalid input fails fast without discarding the user's choices.
+- **[CLI]** A runtime dump failure is no longer printed twice across stdout and stderr.
+- **[Dump]** Interrupt/termination signals are trapped across the whole dump, including the finalize/rename window, so an interrupt no longer orphans `.tmp` files.
+- **[Inspect]** `formatBytes` now reports petabyte-scale sizes correctly (previously 1024× too small).
+
+### Changed
+- **[Performance]** The `--compress gzip` path now uses `klauspost/compress`'s gzip (already a dependency) instead of the standard library — roughly 5× faster deflate for about 4% larger output; the stream is still standard gzip. `zstd` is unchanged and remains the fastest option. Profiling showed dbdump's own code is negligible CPU (it pipes `mysqldump` bytes); compression was the only real hot spot.
+- **[Dev]** Consolidated Docker test infrastructure under `docker/` and added a re-runnable smoke test (`docker/smoke-test.sh`, `just smoke`) covering connection profiles across MySQL 5.7/8.0/8.4 + MariaDB and every TLS mode. `just install` now installs to `~/.local/bin` without sudo.
+
+### Removed
+- **[Docs]** Removed `SECURITY.md` and all references to it, and removed the stale, version-labelled "Future Roadmap" section.
+- **[Internal]** Removed dead code (unused inspector/connection/matcher helpers and the unreachable dry-run path) and de-duplicated the `mysqldump` compatibility-flag handling; no user-facing behavior change.
+
+### Dependencies
+- Bumped `golang.org/x/term` from 0.44.0 to 0.45.0 (and indirect `golang.org/x/sys` to 0.47.0)
+
 ## [1.3.2] - 2026-07-06
 
 ### Dependencies
@@ -42,7 +71,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **[Dump]** Switched the `mysqldump` helper to create a temporary `defaults-extra-file` and report feature detection failures instead of silently degrading.
-- **[Docs]** Synced the README, USER-GUIDE, SECURITY, TESTING_GUIDE, release docs, and workflows with current behavior, TLS limitations, and test counts.
+- **[Docs]** Synced the README, USER-GUIDE, TESTING_GUIDE, release docs, and workflows with current behavior, TLS limitations, and test counts.
 - **[Tests]** Added CLI-wide coverage and expanded integration assertions, raising total tooling coverage to 63.5%.
 
 ### Fixed
@@ -164,7 +193,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Data integrity tests (triggers, procedures, restoration)
   - Exclusion logic verification
 - **Comprehensive documentation**
-  - `SECURITY.md` - Security best practices and credential handling
 - Comprehensive benchmark suite (`scripts/benchmark.sh`)
   - Automated performance testing with statistical analysis
   - JSON output for programmatic analysis
@@ -263,7 +291,6 @@ See `BENCHMARKING.md` for detailed benchmark analysis and environmental factors.
 
 **Recommendations:**
 - Use `DBDUMP_MYSQL_PWD` environment variable instead of command-line `-p` flag
-- Review `SECURITY.md` for credential handling best practices
 - Use `make bench` to validate performance in your environment
 
 ## Migration Guides
@@ -293,21 +320,6 @@ dbdump is faster and more scriptable:
 - Progress tracking
 - Dry-run mode for verification
 
-## Future Roadmap
-
-### v1.3.0 (Planned)
-- Parallel table dumping (2-3x speedup)
-- Cloud storage integration (S3, GCS)
-- Native TLS/SSL connection support
-
-### v1.4.0 (Planned)
-- Data anonymization/masking
-- Incremental dumps
-- Binary format support
-- Import helper functionality
-
-<!-- Roadmap details to be added in future releases -->
-
 ## Support
 
 - **Issues:** [GitHub Issues](https://github.com/helgesverre/dbdump/issues)
@@ -326,7 +338,8 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ---
 
 <!-- Version comparison links -->
-[Unreleased]: https://github.com/helgesverre/dbdump/compare/v1.3.2...HEAD
+[Unreleased]: https://github.com/helgesverre/dbdump/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/helgesverre/dbdump/compare/v1.3.2...v1.4.0
 [1.3.2]: https://github.com/helgesverre/dbdump/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/helgesverre/dbdump/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/helgesverre/dbdump/compare/v1.2.0...v1.3.0

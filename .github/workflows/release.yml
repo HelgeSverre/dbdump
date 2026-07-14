@@ -143,9 +143,11 @@ jobs:
           VERSION="${{ steps.get_version.outputs.VERSION }}"
           VERSION_NUMBER="${VERSION#v}"
           
-          # Extract section from CHANGELOG.md for this version
+          # Extract this version's section body from CHANGELOG.md. A flag-based
+          # scan avoids the awk range gotcha where the version header itself
+          # matches the "next section" pattern (which yielded empty notes).
           if [ -f CHANGELOG.md ]; then
-            awk "/^## \[$VERSION_NUMBER\]/,/^## \[/" CHANGELOG.md | sed '$d' > release-notes.md
+            awk "/^## \[$VERSION_NUMBER\]/{flag=1; next} /^## \[/{if(flag) exit} flag" CHANGELOG.md > release-notes.md
             
             # If nothing extracted, use a default message
             if [ ! -s release-notes.md ]; then

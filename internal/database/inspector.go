@@ -25,65 +25,6 @@ func NewInspector(db *sql.DB) *Inspector {
 	return &Inspector{db: db}
 }
 
-// ListTables returns a list of all tables in the database
-func (i *Inspector) ListTables() ([]string, error) {
-	query := "SHOW TABLES"
-	rows, err := i.db.Query(query)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list tables: %w", err)
-	}
-	defer func() {
-		_ = rows.Close()
-	}()
-
-	var tables []string
-	for rows.Next() {
-		var table string
-		if err := rows.Scan(&table); err != nil {
-			return nil, fmt.Errorf("failed to scan table name: %w", err)
-		}
-		tables = append(tables, table)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating tables: %w", err)
-	}
-
-	return tables, nil
-}
-
-// GetTableInfo retrieves detailed information about a table
-func (i *Inspector) GetTableInfo(tableName string) (*TableInfo, error) {
-	query := `
-		SELECT
-			table_name,
-			IFNULL(table_rows, 0) as row_count,
-			IFNULL(data_length, 0) as data_size,
-			IFNULL(index_length, 0) as index_size,
-			IFNULL(data_length + index_length, 0) as total_size
-		FROM information_schema.tables
-		WHERE table_schema = DATABASE()
-		AND table_name = ?
-	`
-
-	var info TableInfo
-	err := i.db.QueryRow(query, tableName).Scan(
-		&info.Name,
-		&info.RowCount,
-		&info.DataSize,
-		&info.IndexSize,
-		&info.TotalSize,
-	)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to get table info: %w", err)
-	}
-
-	info.SizeDisplay = formatBytes(info.TotalSize)
-
-	return &info, nil
-}
-
 // GetAllTablesInfo retrieves information for all tables
 func (i *Inspector) GetAllTablesInfo() ([]TableInfo, error) {
 	query := `
@@ -130,6 +71,11 @@ func (i *Inspector) GetAllTablesInfo() ([]TableInfo, error) {
 	return tables, nil
 }
 
+// FormatBytes formats a byte count into a human-readable string (e.g. "1.2 MB").
+func FormatBytes(n int64) string {
+	return formatBytes(n)
+}
+
 // formatBytes formats byte size into human-readable format
 func formatBytes(bytes int64) string {
 	const unit = 1024
@@ -137,15 +83,14 @@ func formatBytes(bytes int64) string {
 		return fmt.Sprintf("%d B", bytes)
 	}
 
+	sizes := []string{"KB", "MB", "GB", "TB"}
+	// Stop scaling once we reach the largest known unit so the divisor stays in
+	// step with the unit label; otherwise petabyte-scale inputs report a value
+	// 1024x too small (e.g. 1 PB shown as "1.0 TB").
 	div, exp := int64(unit), 0
-	for n := bytes / unit; n >= unit; n /= unit {
+	for n := bytes / unit; n >= unit && exp < len(sizes)-1; n /= unit {
 		div *= unit
 		exp++
-	}
-
-	sizes := []string{"KB", "MB", "GB", "TB"}
-	if exp >= len(sizes) {
-		exp = len(sizes) - 1
 	}
 
 	return fmt.Sprintf("%.1f %s", float64(bytes)/float64(div), sizes[exp])

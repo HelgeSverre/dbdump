@@ -60,6 +60,38 @@ func TestLoadConfigReturnsErrorForInvalidYAML(t *testing.T) {
 	}
 }
 
+func TestLoadConfigRejectsUnknownKeys(t *testing.T) {
+	t.Parallel()
+
+	path := filepath.Join(t.TempDir(), "typo.yaml")
+	// "excludes" (plural) is a typo for "exclude"; without strict decoding it
+	// would silently unmarshal into an empty Config and drop the user's excludes.
+	if err := os.WriteFile(path, []byte("excludes:\n  exact:\n    - pii_users\n"), 0600); err != nil {
+		t.Fatalf("WriteFile returned error: %v", err)
+	}
+
+	if _, err := LoadConfig(path); err == nil {
+		t.Fatal("expected unknown YAML key to be rejected")
+	}
+}
+
+func TestLoadConfigAcceptsEmptyFile(t *testing.T) {
+	t.Parallel()
+
+	path := filepath.Join(t.TempDir(), "empty.yaml")
+	if err := os.WriteFile(path, nil, 0600); err != nil {
+		t.Fatalf("WriteFile returned error: %v", err)
+	}
+
+	cfg, err := LoadConfig(path)
+	if err != nil {
+		t.Fatalf("LoadConfig returned error for empty file: %v", err)
+	}
+	if len(cfg.Exclude.Exact) != 0 || len(cfg.Exclude.Patterns) != 0 {
+		t.Fatalf("expected empty config, got %#v", cfg)
+	}
+}
+
 func TestLoadGlobalConfigReturnsReadErrorWhenPathIsDirectory(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)

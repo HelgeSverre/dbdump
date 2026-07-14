@@ -1,35 +1,43 @@
 package patterns
 
 import (
+	"fmt"
 	"path/filepath"
-	"strings"
 
 	"github.com/helgesverre/dbdump/internal/config"
 )
 
 // Matcher handles table name pattern matching
 type Matcher struct {
-	exactMatches map[string]bool
+	exactMatches map[string]struct{}
 	patterns     []string
 }
 
-// NewMatcher creates a new Matcher from exclude config
-func NewMatcher(excludes config.ExcludeConfig) *Matcher {
-	exactMap := make(map[string]bool)
+// NewMatcher creates a new Matcher from exclude config. It rejects malformed glob
+// patterns up front so a typo (e.g. "secrets[0-9") fails loudly instead of silently
+// un-excluding a table the user meant to exclude.
+func NewMatcher(excludes config.ExcludeConfig) (*Matcher, error) {
+	exactMap := make(map[string]struct{})
 	for _, exact := range excludes.Exact {
-		exactMap[exact] = true
+		exactMap[exact] = struct{}{}
+	}
+
+	for _, pattern := range excludes.Patterns {
+		if _, err := filepath.Match(pattern, ""); err != nil {
+			return nil, fmt.Errorf("invalid exclude pattern %q: %w", pattern, err)
+		}
 	}
 
 	return &Matcher{
 		exactMatches: exactMap,
 		patterns:     excludes.Patterns,
-	}
+	}, nil
 }
 
 // Matches checks if a table name should be excluded
 func (m *Matcher) Matches(tableName string) bool {
 	// Check exact matches first (faster)
-	if m.exactMatches[tableName] {
+	if _, ok := m.exactMatches[tableName]; ok {
 		return true
 	}
 
@@ -43,15 +51,14 @@ func (m *Matcher) Matches(tableName string) bool {
 	return false
 }
 
-// matchPattern matches a glob-style pattern against a string
-// Supports * wildcard (matches any sequence of characters)
+// matchPattern matches a glob-style pattern against a string.
+// Supports * and ? wildcards. Patterns are validated in NewMatcher, so an
+// ErrBadPattern here is treated as a non-match rather than silently changing
+// semantics to a substring check.
 func matchPattern(pattern, str string) bool {
-	// Use filepath.Match for glob-style matching
-	// This supports * and ? wildcards
 	matched, err := filepath.Match(pattern, str)
 	if err != nil {
-		// If pattern is invalid, fall back to simple contains check
-		return strings.Contains(str, strings.Trim(pattern, "*"))
+		return false
 	}
 	return matched
 }
@@ -65,15 +72,4 @@ func (m *Matcher) FilterTables(tables []string) []string {
 		}
 	}
 	return excluded
-}
-
-// FilterIncluded returns only tables that should NOT be excluded (data should be dumped)
-func (m *Matcher) FilterIncluded(tables []string) []string {
-	var included []string
-	for _, table := range tables {
-		if !m.Matches(table) {
-			included = append(included, table)
-		}
-	}
-	return included
 }

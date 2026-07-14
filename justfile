@@ -42,11 +42,18 @@ build-all:
     @ls -lh {{build_dir}}/
 
 [group('build')]
-[doc('Install the binary to /usr/local/bin')]
-install: build
-    @echo "Installing {{binary_name}} to /usr/local/bin..."
-    sudo cp {{build_dir}}/{{binary_name}} /usr/local/bin/
-    @echo "Installation complete!"
+[doc('Install the binary to ~/.local/bin (no sudo)')]
+install dest="~/.local/bin": build
+    mkdir -p {{dest}}
+    install -m 0755 {{build_dir}}/{{binary_name}} {{dest}}/{{binary_name}}
+    @echo "Installed {{binary_name}} to {{dest}}/{{binary_name}}"
+    @echo "Ensure {{dest}} is on your PATH."
+
+[group('build')]
+[doc('Uninstall the binary from ~/.local/bin')]
+uninstall dest="~/.local/bin":
+    rm -f {{dest}}/{{binary_name}}
+    @echo "Removed {{dest}}/{{binary_name}}"
 
 [group('build')]
 [doc('Remove build artifacts')]
@@ -67,7 +74,7 @@ test:
 [doc('Start Docker Compose test databases')]
 test-docker-up:
     @echo "Starting test databases..."
-    docker compose up -d
+    docker compose -f docker/docker-compose.yml up -d
     @echo "Waiting for databases to be ready (30s)..."
     @sleep 30
     @echo "Databases ready!"
@@ -76,14 +83,19 @@ test-docker-up:
 [doc('Stop Docker Compose test databases')]
 test-docker-down:
     @echo "Stopping test databases..."
-    docker compose down
+    docker compose -f docker/docker-compose.yml down
 
 [group('test')]
 [doc('Stop Docker and remove all data volumes')]
 test-docker-clean:
     @echo "Stopping and cleaning test databases..."
-    docker compose down -v
+    docker compose -f docker/docker-compose.yml down -v
     @echo "All test data removed!"
+
+[group('test')]
+[doc('Run the Docker smoke test (profiles + TLS): all|profiles|tls')]
+smoke target="all":
+    ./docker/smoke-test.sh {{target}}
 
 [group('test')]
 [doc('Generate small test dataset (~10MB) on MySQL 8.0')]

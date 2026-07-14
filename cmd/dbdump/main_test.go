@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/helgesverre/dbdump/internal/config"
 	"github.com/helgesverre/dbdump/internal/database"
 	"github.com/helgesverre/dbdump/internal/ui"
 )
@@ -52,9 +53,13 @@ func TestNewRootCmdIncludesExpectedCommands(t *testing.T) {
 	}
 	slices.Sort(commandNames)
 
-	want := []string{"config", "dump", "list"}
+	want := []string{"config", "dump", "list", "version"}
 	if !reflect.DeepEqual(commandNames, want) {
 		t.Fatalf("unexpected commands: got %v want %v", commandNames, want)
+	}
+
+	if cmd.Version == "" {
+		t.Fatal("expected root command to expose a version for --version")
 	}
 
 	for _, flagName := range []string{"host", "port", "user", "password", "database"} {
@@ -253,6 +258,160 @@ func TestResolveOutputPathUsesCompressionExtension(t *testing.T) {
 	}
 }
 
+func TestApplyProfileFlagsFillsOnlyUnsetFields(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	writeProfiles(t, "profiles:\n  - name: prod\n    host: db.example.com\n    port: 4406\n    user: readonly\n    password: s3cret\n    database: mydb\n")
+
+	// host was set explicitly on the command line, everything else comes from the profile.
+	changed := func(flag string) bool { return flag == "host" }
+	conn := connectionFlags{Profile: "prod", Host: "cli-host"}
+
+	merged, err := applyProfileFlags(conn, changed)
+	if err != nil {
+		t.Fatalf("applyProfileFlags returned error: %v", err)
+	}
+
+	if merged.Host != "cli-host" {
+		t.Fatalf("expected explicit host to be kept, got %q", merged.Host)
+	}
+	if merged.Port != 4406 || merged.User != "readonly" || merged.Password != "s3cret" || merged.Database != "mydb" {
+		t.Fatalf("expected unset fields to come from profile, got %#v", merged)
+	}
+}
+
+func TestApplyProfileFlagsUnknownProfileErrors(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	_, err := applyProfileFlags(connectionFlags{Profile: "nope"}, func(string) bool { return false })
+	if err == nil || !strings.Contains(err.Error(), "not found") {
+		t.Fatalf("expected profile-not-found error, got %v", err)
+	}
+}
+
+func TestToConnectionCopiesTLS(t *testing.T) {
+	conn := connectionFlags{
+		User: "root", Database: "db",
+		TLS: database.TLSConfig{Mode: database.TLSRequire, SkipVerify: true, ServerName: "db.internal"},
+	}
+	got := conn.toConnection()
+	if got.TLS.Mode != database.TLSRequire || !got.TLS.SkipVerify || got.TLS.ServerName != "db.internal" {
+		t.Fatalf("expected TLS settings copied into connection, got %+v", got.TLS)
+	}
+}
+
+func TestValidateRejectsUnpairedTLSCert(t *testing.T) {
+	err := connectionFlags{User: "root", Database: "db", TLS: database.TLSConfig{CertFile: "/c.pem"}}.validate()
+	if err == nil || !strings.Contains(err.Error(), "--tls-cert and --tls-key") {
+		t.Fatalf("expected cert/key pairing error, got %v", err)
+	}
+}
+
+func TestApplyProfileFlagsWithoutProfileIsNoop(t *testing.T) {
+	conn := connectionFlags{Host: "127.0.0.1", User: "root", Database: "testdb"}
+	got, err := applyProfileFlags(conn, func(string) bool { return false })
+	if err != nil {
+		t.Fatalf("applyProfileFlags returned error: %v", err)
+	}
+	if got != conn {
+		t.Fatalf("expected connection flags unchanged, got %#v", got)
+	}
+}
+
+func TestRunConfigAddSavesProfile(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	stubPrintSuccess(t, func(string) {})
+
+	err := runConfigAdd("prod", connectionFlags{
+		Host: "db.example.com", Port: 3306, User: "readonly", Password: "s3cret", Database: "mydb",
+	})
+	if err != nil {
+		t.Fatalf("runConfigAdd returned error: %v", err)
+	}
+
+	profiles, err := config.LoadProfiles()
+	if err != nil {
+		t.Fatalf("LoadProfiles returned error: %v", err)
+	}
+	got, ok := profiles.Find("prod")
+	if !ok {
+		t.Fatal("expected profile to be saved")
+	}
+	if got.Password != "s3cret" || got.Database != "mydb" {
+		t.Fatalf("unexpected saved profile: %#v", got)
+	}
+}
+
+func TestRunConfigRemoveDeletesProfile(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	stubPrintSuccess(t, func(string) {})
+
+	if err := runConfigAdd("prod", connectionFlags{User: "root", Database: "mydb"}); err != nil {
+		t.Fatalf("runConfigAdd returned error: %v", err)
+	}
+	if err := runConfigRemove("prod"); err != nil {
+		t.Fatalf("runConfigRemove returned error: %v", err)
+	}
+
+	profiles, err := config.LoadProfiles()
+	if err != nil {
+		t.Fatalf("LoadProfiles returned error: %v", err)
+	}
+	if _, ok := profiles.Find("prod"); ok {
+		t.Fatal("expected profile to be removed")
+	}
+
+	if err := runConfigRemove("prod"); err == nil || !strings.Contains(err.Error(), "not found") {
+		t.Fatalf("expected not-found error removing a missing profile, got %v", err)
+	}
+}
+
+func writeProfiles(t *testing.T, contents string) {
+	t.Helper()
+	path, err := config.GetProfilesPath()
+	if err != nil {
+		t.Fatalf("GetProfilesPath returned error: %v", err)
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+		t.Fatalf("MkdirAll returned error: %v", err)
+	}
+	if err := os.WriteFile(path, []byte(contents), 0600); err != nil {
+		t.Fatalf("WriteFile returned error: %v", err)
+	}
+}
+
+func TestWriteDryRunPlanShowsSizesAndModes(t *testing.T) {
+	tables := []database.TableInfo{
+		{Name: "users", TotalSize: 3 * 1024 * 1024, DataSize: 2 * 1024 * 1024, RowCount: 1500, SizeDisplay: "3.0 MB"},
+		{Name: "sessions", TotalSize: 800 * 1024, DataSize: 700 * 1024, RowCount: 12000, SizeDisplay: "800.0 KB"},
+	}
+
+	var buf strings.Builder
+	if err := writeDryRunPlan(&buf, tables, []string{"sessions"}, "/tmp/backup.sql.gz", "gzip"); err != nil {
+		t.Fatalf("writeDryRunPlan returned error: %v", err)
+	}
+	out := buf.String()
+
+	for _, want := range []string{
+		"/tmp/backup.sql.gz",
+		"compression: gzip",
+		"users",
+		"data + structure",
+		"sessions",
+		"structure only",
+		"2 tables",
+		"1 excluded from data",
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("expected dry-run plan to contain %q, got:\n%s", want, out)
+		}
+	}
+}
+
 func TestRunConfigListPrintsProfiles(t *testing.T) {
 	homeDir := t.TempDir()
 	t.Setenv("HOME", homeDir)
@@ -342,7 +501,7 @@ func TestRunDumpDryRunPrintsPlan(t *testing.T) {
 		t.Fatal("expected session to be closed")
 	}
 
-	if !strings.Contains(output, "Dry run - would exclude the following tables:") || !strings.Contains(output, "audits") {
+	if !strings.Contains(output, "Dry run") || !strings.Contains(output, "audits") || !strings.Contains(output, "structure only") {
 		t.Fatalf("unexpected dry-run output: %q", output)
 	}
 	if !strings.Contains(output, "testdb_20260330_120000.sql.gz") {
@@ -360,7 +519,6 @@ func TestRunDumpSuccessInvokesDumper(t *testing.T) {
 	})
 	stubPrintInfo(t, func(string) {})
 	stubPrintSuccess(t, func(string) {})
-	stubPrintError(t, func(error) {})
 	stubCheckMySQLDump(t, func() error { return nil })
 	stubStartSSHTunnel(t, func(ctx context.Context, conn *database.Connection) (func() error, error) {
 		return nil, nil
@@ -434,6 +592,47 @@ func TestRunDumpReturnsFeatureCheckError(t *testing.T) {
 	}
 }
 
+func TestRunDumpRejectsInvalidCompressionBeforeConnecting(t *testing.T) {
+	stubOpenInspection(t, func(*database.Connection) (inspectionSession, tableInspector, error) {
+		t.Fatal("should not connect when the compression flag is invalid")
+		return nil, nil, nil
+	})
+
+	err := runDump(
+		connectionFlags{Host: "127.0.0.1", Port: 3306, User: "root", Database: "testdb"},
+		dumpFlags{AutoMode: true, Compression: "brotli"},
+	)
+	if err == nil || !strings.Contains(err.Error(), "unsupported compression") {
+		t.Fatalf("expected unsupported compression error, got %v", err)
+	}
+}
+
+func TestRunDumpChecksMySQLDumpBeforeSelection(t *testing.T) {
+	session := &fakeSession{}
+	stubOpenInspection(t, func(conn *database.Connection) (inspectionSession, tableInspector, error) {
+		return session, fakeInspector{tables: []database.TableInfo{{Name: "users"}}}, nil
+	})
+	stubPrintInfo(t, func(string) {})
+	stubPrintSuccess(t, func(string) {})
+	stubStartSSHTunnel(t, func(ctx context.Context, conn *database.Connection) (func() error, error) {
+		return nil, nil
+	})
+	stubTerminalCheck(t, func(int) bool { return true })
+	stubTableSelection(t, func([]database.TableInfo, []string) ([]string, error) {
+		t.Fatal("interactive selection must not run when mysqldump is missing")
+		return nil, nil
+	})
+	stubCheckMySQLDump(t, func() error { return errors.New("missing binary") })
+
+	err := runDump(connectionFlags{Host: "127.0.0.1", Port: 3306, User: "root", Database: "testdb"}, dumpFlags{})
+	if err == nil || !strings.Contains(err.Error(), "mysqldump is required but not found in PATH") {
+		t.Fatalf("expected mysqldump error, got %v", err)
+	}
+	if !session.closed {
+		t.Fatal("expected session to be closed")
+	}
+}
+
 func TestRunDumpStartsSSHTunnel(t *testing.T) {
 	session := &fakeSession{}
 	stubOpenInspection(t, func(conn *database.Connection) (inspectionSession, tableInspector, error) {
@@ -444,7 +643,6 @@ func TestRunDumpStartsSSHTunnel(t *testing.T) {
 	})
 	stubPrintInfo(t, func(string) {})
 	stubPrintSuccess(t, func(string) {})
-	stubPrintError(t, func(error) {})
 	stubCheckMySQLDump(t, func() error { return nil })
 	stubNewDumper(t, func(opts *database.DumpOptions) dumpRunner {
 		return fakeDumper{result: &database.DumpResult{OutputFile: opts.OutputFile, FileSizeDisplay: "1 B"}}
@@ -581,15 +779,6 @@ func stubPrintSuccess(t *testing.T, fn func(string)) {
 	printSuccess = fn
 	t.Cleanup(func() {
 		printSuccess = original
-	})
-}
-
-func stubPrintError(t *testing.T, fn func(error)) {
-	t.Helper()
-	original := printError
-	printError = fn
-	t.Cleanup(func() {
-		printError = original
 	})
 }
 

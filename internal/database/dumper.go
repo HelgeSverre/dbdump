@@ -2,7 +2,6 @@ package database
 
 import (
 	"bufio"
-	"compress/gzip"
 	"context"
 	"fmt"
 	"io"
@@ -15,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/klauspost/compress/gzip"
 	"github.com/klauspost/compress/zstd"
 )
 
@@ -30,6 +30,7 @@ var (
 type mysqlDumpFeatureSet struct {
 	ColumnStatistics bool
 	SetGTIDPurged    bool
+	SSLMode          bool
 }
 
 var (
@@ -43,7 +44,6 @@ type DumpOptions struct {
 	Connection    *Connection
 	ExcludeTables []string
 	OutputFile    string
-	DryRun        bool
 	Compression   string
 }
 
@@ -70,9 +70,11 @@ type DumpResult struct {
 func (d *Dumper) Dump() (result *DumpResult, err error) {
 	startTime := time.Now()
 
-	if d.options.DryRun {
-		return d.dryRun()
-	}
+	// Trap interrupt/termination signals for the entire dump — including the
+	// finalize/rename window — so the deferred temp-file cleanup always runs
+	// instead of the process dying mid-write and orphaning a .tmp file.
+	ctx, stop := signalNotify(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
 	if err := validateDumpOutputPath(d.options.OutputFile); err != nil {
 		return nil, err
@@ -123,11 +125,11 @@ func (d *Dumper) Dump() (result *DumpResult, err error) {
 
 	writer := bufio.NewWriterSize(compressedWriter, 256*1024)
 
-	if err = d.dumpStructure(writer, defaultsFile); err != nil {
+	if err = d.dumpStructure(ctx, writer, defaultsFile); err != nil {
 		return nil, fmt.Errorf("failed to dump structure: %w", err)
 	}
 
-	if err = d.dumpData(writer, defaultsFile); err != nil {
+	if err = d.dumpData(ctx, writer, defaultsFile); err != nil {
 		return nil, fmt.Errorf("failed to dump data: %w", err)
 	}
 
@@ -282,10 +284,7 @@ func newCompressedWriter(target io.Writer, format string) (io.WriteCloser, error
 }
 
 // dumpStructure dumps the structure of all tables
-func (d *Dumper) dumpStructure(writer io.Writer, defaultsFile string) error {
-	ctx, stop := signalNotify(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
+func (d *Dumper) dumpStructure(ctx context.Context, writer io.Writer, defaultsFile string) error {
 	args := d.buildMySQLDumpArgs(defaultsFile)
 	args = append(args,
 		"--no-data",
@@ -293,15 +292,9 @@ func (d *Dumper) dumpStructure(writer io.Writer, defaultsFile string) error {
 		"--events",
 	)
 
-	features, err := getMySQLDumpFeatures()
+	args, err := appendMySQLDumpFeatureArgs(args, d.options.Connection.TLS)
 	if err != nil {
 		return err
-	}
-	if features.SetGTIDPurged {
-		args = append(args, "--set-gtid-purged=OFF")
-	}
-	if features.ColumnStatistics {
-		args = append(args, "--column-statistics=0")
 	}
 
 	args = append(args, d.options.Connection.Database)
@@ -318,10 +311,7 @@ func (d *Dumper) dumpStructure(writer io.Writer, defaultsFile string) error {
 }
 
 // dumpData dumps data for non-excluded tables
-func (d *Dumper) dumpData(writer io.Writer, defaultsFile string) error {
-	ctx, stop := signalNotify(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
+func (d *Dumper) dumpData(ctx context.Context, writer io.Writer, defaultsFile string) error {
 	args := d.buildMySQLDumpArgs(defaultsFile)
 	args = append(args,
 		"--no-create-info",
@@ -330,15 +320,9 @@ func (d *Dumper) dumpData(writer io.Writer, defaultsFile string) error {
 		"--skip-events",
 	)
 
-	features, err := getMySQLDumpFeatures()
+	args, err := appendMySQLDumpFeatureArgs(args, d.options.Connection.TLS)
 	if err != nil {
 		return err
-	}
-	if features.SetGTIDPurged {
-		args = append(args, "--set-gtid-purged=OFF")
-	}
-	if features.ColumnStatistics {
-		args = append(args, "--column-statistics=0")
 	}
 
 	for _, table := range d.options.ExcludeTables {
@@ -359,11 +343,35 @@ func (d *Dumper) dumpData(writer io.Writer, defaultsFile string) error {
 	return nil
 }
 
+// appendMySQLDumpFeatureArgs appends version-dependent compatibility flags and the
+// TLS flags shared by the structure and data passes, so each only has to be added
+// once. TLS flags are gated on mysqldump's --ssl-mode support (MariaDB fallback).
+func appendMySQLDumpFeatureArgs(args []string, tlsCfg TLSConfig) ([]string, error) {
+	features, err := getMySQLDumpFeatures()
+	if err != nil {
+		return nil, err
+	}
+	if features.SetGTIDPurged {
+		args = append(args, "--set-gtid-purged=OFF")
+	}
+	if features.ColumnStatistics {
+		args = append(args, "--column-statistics=0")
+	}
+
+	tlsArgs, err := mysqlDumpTLSArgs(tlsCfg, features.SSLMode)
+	if err != nil {
+		return nil, err
+	}
+	args = append(args, tlsArgs...)
+
+	return args, nil
+}
+
 // buildMySQLDumpArgs builds common mysqldump arguments.
-func (d *Dumper) buildMySQLDumpArgs(defaultsFile ...string) []string {
+func (d *Dumper) buildMySQLDumpArgs(defaultsFile string) []string {
 	args := []string{}
-	if len(defaultsFile) > 0 && defaultsFile[0] != "" {
-		args = append(args, "--defaults-extra-file="+defaultsFile[0])
+	if defaultsFile != "" {
+		args = append(args, "--defaults-extra-file="+defaultsFile)
 	}
 
 	args = append(args,
@@ -446,6 +454,7 @@ func getMySQLDumpFeatures() (mysqlDumpFeatureSet, error) {
 		mysqlDumpFeatures = mysqlDumpFeatureSet{
 			ColumnStatistics: strings.Contains(help, "column-statistics"),
 			SetGTIDPurged:    strings.Contains(help, "set-gtid-purged"),
+			SSLMode:          strings.Contains(help, "ssl-mode"),
 		}
 	})
 
@@ -456,18 +465,6 @@ func resetMySQLDumpFeatures() {
 	mysqlDumpFeaturesOnce = sync.Once{}
 	mysqlDumpFeatures = mysqlDumpFeatureSet{}
 	mysqlDumpFeaturesErr = nil
-}
-
-// dryRun performs a dry run showing what would be dumped
-func (d *Dumper) dryRun() (*DumpResult, error) {
-	result := &DumpResult{
-		OutputFile:     d.options.OutputFile,
-		Duration:       0,
-		ExcludedTables: d.options.ExcludeTables,
-		FileSize:       0,
-	}
-
-	return result, nil
 }
 
 // CheckMySQLDump verifies that mysqldump is available

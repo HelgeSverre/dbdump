@@ -16,11 +16,12 @@ type Connection struct {
 	Password string
 	Database string
 	SSH      SSHConfig
+	TLS      TLSConfig
 }
 
 // DSN returns the data source name for MySQL connection
 // Uses mysql.Config for proper escaping and timeout configuration
-func (c *Connection) DSN() string {
+func (c *Connection) DSN() (string, error) {
 	cfg := mysql.NewConfig()
 	cfg.User = c.User
 	cfg.Passwd = c.Password
@@ -32,12 +33,31 @@ func (c *Connection) DSN() string {
 	cfg.WriteTimeout = 30 * time.Second
 	cfg.ParseTime = true
 
-	return cfg.FormatDSN()
+	tlsParam, err := tlsDSNParam(c.TLS)
+	if err != nil {
+		return "", err
+	}
+	if tlsParam != "" {
+		cfg.TLSConfig = tlsParam
+	}
+
+	return cfg.FormatDSN(), nil
 }
 
 // Connect establishes a connection to the database
 func (c *Connection) Connect() (*sql.DB, error) {
-	db, err := sql.Open("mysql", c.DSN())
+	dsn, err := c.DSN()
+	if err != nil {
+		return nil, err
+	}
+
+	// Register any custom TLS config (custom CA/cert/verify-ca) so the DSN's
+	// tls=<name> parameter resolves before the driver dials.
+	if err := registerCustomTLS(c.TLS); err != nil {
+		return nil, err
+	}
+
+	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
@@ -49,16 +69,4 @@ func (c *Connection) Connect() (*sql.DB, error) {
 	}
 
 	return db, nil
-}
-
-// TestConnection tests if the connection is valid
-func (c *Connection) TestConnection() error {
-	db, err := c.Connect()
-	if err != nil {
-		return err
-	}
-	defer func() {
-		_ = db.Close()
-	}()
-	return nil
 }

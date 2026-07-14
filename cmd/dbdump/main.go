@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -43,7 +45,6 @@ var (
 	runTableSelection = ui.RunInteractiveSelection
 	isTerminal        = func(fd int) bool { return term.IsTerminal(fd) }
 	nowTime           = time.Now
-	printError        = ui.PrintError
 	printInfo         = ui.PrintInfo
 	printSuccess      = ui.PrintSuccess
 	printSummary      = ui.PrintSummary
@@ -58,7 +59,9 @@ type connectionFlags struct {
 	User     string
 	Password string
 	Database string
+	Profile  string
 	SSH      sshFlags
+	TLS      database.TLSConfig
 }
 
 type sshFlags struct {
@@ -79,6 +82,47 @@ type dumpFlags struct {
 	Compression     string
 }
 
+// Build information, overridden at release time via -ldflags "-X main.Version=..."
+var (
+	Version   = "dev"
+	Commit    = "none"
+	BuildTime = "unknown"
+)
+
+// versionInfo resolves the build metadata. Release builds set it via ldflags;
+// otherwise it falls back to Go's embedded build info, so `go install ...@vX.Y.Z`
+// reports the module version and local `go build` reports the VCS commit and time.
+func versionInfo() (version, commit, buildTime string) {
+	version, commit, buildTime = Version, Commit, BuildTime
+	if version != "dev" {
+		return version, commit, buildTime
+	}
+
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return version, commit, buildTime
+	}
+	if v := info.Main.Version; v != "" && v != "(devel)" {
+		version = v
+	}
+	for _, setting := range info.Settings {
+		switch setting.Key {
+		case "vcs.revision":
+			if commit == "none" && setting.Value != "" {
+				commit = setting.Value
+				if len(commit) > 12 {
+					commit = commit[:12]
+				}
+			}
+		case "vcs.time":
+			if buildTime == "unknown" && setting.Value != "" {
+				buildTime = setting.Value
+			}
+		}
+	}
+	return version, commit, buildTime
+}
+
 func main() {
 	if err := newRootCmd().Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -89,12 +133,14 @@ func main() {
 func newRootCmd() *cobra.Command {
 	conn := &connectionFlags{}
 
+	version, _, _ := versionInfo()
 	rootCmd := &cobra.Command{
 		Use:   "dbdump",
 		Short: "Intelligent MySQL database dumping tool",
 		Long: `dbdump is a CLI tool for intelligent MySQL database dumping.
 It excludes noisy table data while preserving structure, making database
 dumps faster and more manageable for development environments.`,
+		Version: version,
 	}
 
 	rootCmd.PersistentFlags().StringVarP(&conn.Host, "host", "H", "127.0.0.1", "Database host")
@@ -102,17 +148,38 @@ dumps faster and more manageable for development environments.`,
 	rootCmd.PersistentFlags().StringVarP(&conn.User, "user", "u", "", "Database user")
 	rootCmd.PersistentFlags().StringVarP(&conn.Password, "password", "p", "", "Database password (or use DBDUMP_MYSQL_PWD/MYSQL_PWD env)")
 	rootCmd.PersistentFlags().StringVarP(&conn.Database, "database", "d", "", "Database name")
+	rootCmd.PersistentFlags().StringVar(&conn.Profile, "profile", "", "Load connection settings from a saved profile (see 'dbdump config')")
 	rootCmd.PersistentFlags().StringVar(&conn.SSH.Host, "ssh-host", "", "SSH bastion host for tunneling to the database")
 	rootCmd.PersistentFlags().IntVar(&conn.SSH.Port, "ssh-port", 22, "SSH bastion port")
 	rootCmd.PersistentFlags().StringVar(&conn.SSH.User, "ssh-user", "", "SSH username (defaults to database user)")
 	rootCmd.PersistentFlags().StringVar(&conn.SSH.KeyFile, "ssh-key", "", "SSH private key path")
 	rootCmd.PersistentFlags().IntVar(&conn.SSH.LocalPort, "ssh-local-port", 0, "Local port for the SSH tunnel (0 picks a free port)")
 
+	rootCmd.PersistentFlags().StringVar(&conn.TLS.Mode, "tls-mode", "", "TLS mode: disabled, preferred, require, verify-ca, verify-identity")
+	rootCmd.PersistentFlags().StringVar(&conn.TLS.CAFile, "tls-ca", "", "Path to the TLS CA certificate (PEM) used to verify the server")
+	rootCmd.PersistentFlags().StringVar(&conn.TLS.CertFile, "tls-cert", "", "Path to the client certificate (PEM) for mutual TLS")
+	rootCmd.PersistentFlags().StringVar(&conn.TLS.KeyFile, "tls-key", "", "Path to the client private key (PEM) for mutual TLS")
+	rootCmd.PersistentFlags().BoolVar(&conn.TLS.SkipVerify, "tls-skip-verify", false, "Encrypt but skip server certificate verification (insecure)")
+	rootCmd.PersistentFlags().StringVar(&conn.TLS.ServerName, "tls-server-name", "", "Override the hostname verified against the server certificate (useful behind an SSH tunnel)")
+
 	rootCmd.AddCommand(newDumpCmd(conn))
 	rootCmd.AddCommand(newListCmd(conn))
-	rootCmd.AddCommand(newConfigCmd())
+	rootCmd.AddCommand(newConfigCmd(conn))
+	rootCmd.AddCommand(newVersionCmd())
 
 	return rootCmd
+}
+
+func newVersionCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "version",
+		Short: "Print version information",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			version, commit, buildTime := versionInfo()
+			fmt.Printf("dbdump %s (commit %s, built %s)\n", version, commit, buildTime)
+			return nil
+		},
+	}
 }
 
 func newDumpCmd(conn *connectionFlags) *cobra.Command {
@@ -124,7 +191,11 @@ func newDumpCmd(conn *connectionFlags) *cobra.Command {
 		Long: `Dump a MySQL database, excluding data from noisy tables (like audit logs,
 sessions, cache) while preserving their structure.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runDump(*conn, *opts)
+			connFlags, err := applyProfileFlags(*conn, cmd.Flags().Changed)
+			if err != nil {
+				return err
+			}
+			return runDump(connFlags, *opts)
 		},
 	}
 
@@ -145,16 +216,20 @@ func newListCmd(conn *connectionFlags) *cobra.Command {
 		Short: "List all tables in the database",
 		Long:  `List all tables in the database with their sizes and row counts.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runList(*conn)
+			connFlags, err := applyProfileFlags(*conn, cmd.Flags().Changed)
+			if err != nil {
+				return err
+			}
+			return runList(connFlags)
 		},
 	}
 }
 
-func newConfigCmd() *cobra.Command {
+func newConfigCmd(conn *connectionFlags) *cobra.Command {
 	configCmd := &cobra.Command{
 		Use:   "config",
-		Short: "Inspect dbdump configuration",
-		Long:  `Inspect dbdump configuration and saved connection profiles.`,
+		Short: "Inspect and manage dbdump configuration",
+		Long:  `Inspect and manage dbdump configuration and saved connection profiles.`,
 	}
 
 	configCmd.AddCommand(&cobra.Command{
@@ -163,12 +238,39 @@ func newConfigCmd() *cobra.Command {
 		RunE:  runConfigList,
 	})
 
+	configCmd.AddCommand(&cobra.Command{
+		Use:   "add <name>",
+		Short: "Save the current connection flags as a named profile",
+		Long: `Save the current connection flags (--host/--port/--user/--password/--database)
+as a named profile. The profiles file is written with 0600 permissions; treat it
+like any other credential store.`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runConfigAdd(args[0], *conn)
+		},
+	})
+
+	configCmd.AddCommand(&cobra.Command{
+		Use:   "remove <name>",
+		Short: "Delete a saved connection profile",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runConfigRemove(args[0])
+		},
+	})
+
 	return configCmd
 }
 
 func runDump(connFlags connectionFlags, opts dumpFlags) error {
 	connFlags = connFlags.withResolvedPassword()
 	if err := connFlags.validate(); err != nil {
+		return err
+	}
+
+	// Validate the compression flag before doing any work so a bad value fails
+	// fast instead of after connecting and running interactive selection.
+	if _, err := database.ResolveCompressionFormat(opts.OutputFile, opts.Compression); err != nil {
 		return err
 	}
 
@@ -194,12 +296,23 @@ func runDump(connFlags connectionFlags, opts dumpFlags) error {
 
 	printInfo(fmt.Sprintf("Found %d tables", len(tablesInfo)))
 
+	// A real dump needs mysqldump; check it before asking the user to make
+	// selections so a missing binary doesn't waste their interactive input.
+	if !opts.DryRun {
+		if err := checkMySQLDump(); err != nil {
+			return fmt.Errorf("mysqldump is required but not found in PATH: %w", err)
+		}
+	}
+
 	excludeConfig, err := buildExcludeConfig(opts)
 	if err != nil {
 		return err
 	}
 
-	matcher := patterns.NewMatcher(excludeConfig)
+	matcher, err := patterns.NewMatcher(excludeConfig)
+	if err != nil {
+		return err
+	}
 	tableNames := make([]string, len(tablesInfo))
 	for i, info := range tablesInfo {
 		tableNames[i] = info.Name
@@ -221,16 +334,7 @@ func runDump(connFlags connectionFlags, opts dumpFlags) error {
 	}
 
 	if opts.DryRun {
-		fmt.Println("\nDry run - would exclude the following tables:")
-		for _, table := range finalExcludes {
-			fmt.Printf("  - %s\n", table)
-		}
-		fmt.Printf("\nWould create dump file: %s\n", outputPath)
-		return nil
-	}
-
-	if err := checkMySQLDump(); err != nil {
-		return fmt.Errorf("mysqldump is required but not found in PATH: %w", err)
+		return writeDryRunPlan(os.Stdout, tablesInfo, finalExcludes, outputPath, opts.Compression)
 	}
 
 	printInfo(fmt.Sprintf("Starting dump to %s", outputPath))
@@ -239,13 +343,11 @@ func runDump(connFlags connectionFlags, opts dumpFlags) error {
 		Connection:    conn,
 		ExcludeTables: finalExcludes,
 		OutputFile:    outputPath,
-		DryRun:        opts.DryRun,
 		Compression:   opts.Compression,
 	})
 
 	result, err := dumper.Dump()
 	if err != nil {
-		printError(err)
 		return err
 	}
 
@@ -308,10 +410,117 @@ func runConfigList(cmd *cobra.Command, args []string) error {
 		if profile.Database != "" {
 			fmt.Printf("    Database: %s\n", profile.Database)
 		}
+		if profile.Password != "" {
+			fmt.Println("    Password: (saved)")
+		}
 		fmt.Println()
 	}
 
 	return nil
+}
+
+func runConfigAdd(name string, connFlags connectionFlags) error {
+	profiles, err := config.LoadProfiles()
+	if err != nil {
+		return fmt.Errorf("failed to load profiles: %w", err)
+	}
+
+	profiles.Upsert(config.ConnectionProfile{
+		Name:          name,
+		Host:          connFlags.Host,
+		Port:          connFlags.Port,
+		User:          connFlags.User,
+		Password:      connFlags.Password,
+		Database:      connFlags.Database,
+		TLSMode:       connFlags.TLS.Mode,
+		TLSCAFile:     connFlags.TLS.CAFile,
+		TLSCertFile:   connFlags.TLS.CertFile,
+		TLSKeyFile:    connFlags.TLS.KeyFile,
+		TLSSkipVerify: connFlags.TLS.SkipVerify,
+		TLSServerName: connFlags.TLS.ServerName,
+	})
+
+	if err := config.SaveProfiles(profiles); err != nil {
+		return fmt.Errorf("failed to save profile: %w", err)
+	}
+
+	printSuccess(fmt.Sprintf("Saved connection profile %q", name))
+	return nil
+}
+
+func runConfigRemove(name string) error {
+	profiles, err := config.LoadProfiles()
+	if err != nil {
+		return fmt.Errorf("failed to load profiles: %w", err)
+	}
+
+	if !profiles.Remove(name) {
+		return fmt.Errorf("connection profile %q not found", name)
+	}
+
+	if err := config.SaveProfiles(profiles); err != nil {
+		return fmt.Errorf("failed to save profiles: %w", err)
+	}
+
+	printSuccess(fmt.Sprintf("Removed connection profile %q", name))
+	return nil
+}
+
+// applyProfileFlags merges a named profile into the connection flags. Explicit
+// command-line flags win over profile values (changed reports whether a flag was
+// set on the command line), and only non-empty profile fields are applied. The
+// password still falls back to the environment via withResolvedPassword when
+// neither a flag nor the profile provides one.
+func applyProfileFlags(conn connectionFlags, changed func(string) bool) (connectionFlags, error) {
+	if conn.Profile == "" {
+		return conn, nil
+	}
+
+	profiles, err := config.LoadProfiles()
+	if err != nil {
+		return conn, fmt.Errorf("failed to load profiles: %w", err)
+	}
+
+	profile, ok := profiles.Find(conn.Profile)
+	if !ok {
+		return conn, fmt.Errorf("connection profile %q not found", conn.Profile)
+	}
+
+	if profile.Host != "" && !changed("host") {
+		conn.Host = profile.Host
+	}
+	if profile.Port != 0 && !changed("port") {
+		conn.Port = profile.Port
+	}
+	if profile.User != "" && !changed("user") {
+		conn.User = profile.User
+	}
+	if profile.Password != "" && !changed("password") {
+		conn.Password = profile.Password
+	}
+	if profile.Database != "" && !changed("database") {
+		conn.Database = profile.Database
+	}
+	if profile.TLSMode != "" && !changed("tls-mode") {
+		conn.TLS.Mode = profile.TLSMode
+	}
+	if profile.TLSCAFile != "" && !changed("tls-ca") {
+		conn.TLS.CAFile = profile.TLSCAFile
+	}
+	if profile.TLSCertFile != "" && !changed("tls-cert") {
+		conn.TLS.CertFile = profile.TLSCertFile
+	}
+	if profile.TLSKeyFile != "" && !changed("tls-key") {
+		conn.TLS.KeyFile = profile.TLSKeyFile
+	}
+	if profile.TLSSkipVerify && !changed("tls-skip-verify") {
+		conn.TLS.SkipVerify = true
+	}
+	if profile.TLSServerName != "" && !changed("tls-server-name") {
+		conn.TLS.ServerName = profile.TLSServerName
+	}
+
+	return conn, nil
 }
 
 func (c connectionFlags) withResolvedPassword() connectionFlags {
@@ -329,10 +538,13 @@ func (c connectionFlags) withResolvedPassword() connectionFlags {
 
 func (c connectionFlags) validate() error {
 	if c.User == "" {
-		return fmt.Errorf("database user is required (use -u or --user)")
+		return errors.New("database user is required (use -u or --user)")
 	}
 	if c.Database == "" {
-		return fmt.Errorf("database name is required (use -d or --database)")
+		return errors.New("database name is required (use -d or --database)")
+	}
+	if err := c.TLS.Validate(); err != nil {
+		return err
 	}
 	return nil
 }
@@ -356,6 +568,7 @@ func (c connectionFlags) toConnection() *database.Connection {
 		Password: c.Password,
 		Database: c.Database,
 		SSH:      sshConfig,
+		TLS:      c.TLS,
 	}
 }
 
@@ -422,6 +635,52 @@ func resolveExcludes(tables []database.TableInfo, preSelected []string, autoMode
 	return selected, nil
 }
 
+// writeDryRunPlan renders the full dump plan without writing any data: every table
+// with its size/row count and whether its data will be dumped or only its
+// structure preserved, plus totals and the resolved output path and compression.
+func writeDryRunPlan(w io.Writer, tables []database.TableInfo, excludes []string, outputPath, compression string) error {
+	format, err := database.ResolveCompressionFormat(outputPath, compression)
+	if err != nil {
+		return err
+	}
+
+	excluded := make(map[string]struct{}, len(excludes))
+	for _, name := range excludes {
+		excluded[name] = struct{}{}
+	}
+
+	lines := []string{
+		"\nDry run — no data will be written.\n",
+		fmt.Sprintf("\nOutput: %s  (compression: %s)\n\n", outputPath, format),
+		fmt.Sprintf("%-40s %12s %14s  %s\n", "TABLE", "SIZE", "ROWS", "MODE"),
+	}
+
+	var totalSize, skippedData int64
+	excludedCount := 0
+	for _, table := range tables {
+		mode := "data + structure"
+		if _, ok := excluded[table.Name]; ok {
+			mode = "structure only"
+			excludedCount++
+			skippedData += table.DataSize
+		}
+		lines = append(lines, fmt.Sprintf("%-40s %12s %14d  %s\n", table.Name, table.SizeDisplay, table.RowCount, mode))
+		totalSize += table.TotalSize
+	}
+
+	lines = append(lines,
+		"\nSummary:\n",
+		fmt.Sprintf("  %d tables, %d excluded from data (structure preserved)\n", len(tables), excludedCount),
+		fmt.Sprintf("  Total size across all tables: %s\n", database.FormatBytes(totalSize)),
+	)
+	if excludedCount > 0 {
+		lines = append(lines, fmt.Sprintf("  Data skipped for excluded tables: ~%s\n", database.FormatBytes(skippedData)))
+	}
+
+	_, err = io.WriteString(w, strings.Join(lines, ""))
+	return err
+}
+
 func resolveOutputPath(databaseName, configuredPath, compression string) (string, error) {
 	compressionFormat, err := database.ResolveCompressionFormat(configuredPath, compression)
 	if err != nil {
@@ -442,7 +701,7 @@ func resolveOutputPath(databaseName, configuredPath, compression string) (string
 	return absPath, nil
 }
 
-func closeDB(db interface{ Close() error }) {
+func closeDB(db inspectionSession) {
 	if err := db.Close(); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: failed to close database connection: %v\n", err)
 	}

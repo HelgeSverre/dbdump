@@ -37,7 +37,7 @@ Upgrade later with `brew upgrade helgesverre/tap/dbdump`. Available for macOS an
 
 ### Using Go
 
-If you have Go 1.24+ installed:
+If you have Go 1.26+ installed:
 
 ```bash
 go install github.com/helgesverre/dbdump/cmd/dbdump@latest
@@ -108,7 +108,11 @@ cd dbdump
 just install
 ```
 
-Requires Go 1.24+ and [just](https://github.com/casey/just).
+`just install` builds and installs to `~/.local/bin` (no sudo); pass a
+destination to override, e.g. `just install /usr/local/bin`. Ensure the target
+directory is on your `PATH`.
+
+Requires Go 1.26+ and [just](https://github.com/casey/just).
 
 ## Quick Start
 
@@ -182,6 +186,18 @@ dbdump dump -H 127.0.0.1 -P 3306 -u root -d mydb \
 -u, --user        Database user
 -p, --password    Database password (or use DBDUMP_MYSQL_PWD/MYSQL_PWD env)
 -d, --database    Database name
+    --profile     Load connection settings from a saved profile (see `dbdump config`)
+```
+
+### TLS/SSL Options
+
+```bash
+    --tls-mode          TLS mode: disabled, preferred, require, verify-ca, verify-identity
+    --tls-ca            Path to the TLS CA certificate (PEM) used to verify the server
+    --tls-cert          Path to the client certificate (PEM) for mutual TLS
+    --tls-key           Path to the client private key (PEM) for mutual TLS
+    --tls-skip-verify   Encrypt but skip server certificate verification (insecure)
+    --tls-server-name   Override the hostname verified against the server certificate
 ```
 
 ### Dump Options
@@ -220,6 +236,25 @@ dbdump dump -H 127.0.0.1 -P 3306 -u root -d mydb \
 ```
 
 When SSH tunneling is enabled, `-H/--host` and `-P/--port` still describe the database endpoint as seen from the SSH server.
+
+### TLS/SSL
+
+`dbdump` can connect over TLS, applied to both its own inspection connection and the `mysqldump` subprocess:
+
+```bash
+# Encrypt and verify the server against a CA
+dbdump dump -H db.example.com -u readonly -d myapp \
+  --tls-mode verify-identity --tls-ca /etc/ssl/certs/ca.pem --auto
+
+# Mutual TLS (client certificate)
+dbdump dump -H db.example.com -u readonly -d myapp \
+  --tls-mode verify-ca --tls-ca ca.pem --tls-cert client.pem --tls-key client-key.pem --auto
+
+# Encrypt only, skip verification (dev / self-signed)
+dbdump dump -H localhost -u root -d mydb --tls-mode require --tls-skip-verify --auto
+```
+
+Modes mirror MySQL's `ssl-mode`: `disabled`, `preferred` (opportunistic), `require` (encrypt, no verification), `verify-ca` (verify the chain), and `verify-identity` (verify the chain and hostname). Behind an SSH tunnel the host becomes `127.0.0.1`, so use `--tls-server-name` to pin the real certificate name. With no `--tls-*` flag, connections behave exactly as before.
 
 ### Examples
 
@@ -370,7 +405,6 @@ Result: A complete database dump with empty noisy tables.
 
 - **[USER-GUIDE.md](USER-GUIDE.md)** - Comprehensive user guide with detailed configuration, examples, and
   troubleshooting
-- **[SECURITY.md](SECURITY.md)** - Security best practices and credential handling
 - **[CHANGELOG.md](CHANGELOG.md)** - Version history
 
 ### Developer Documentation
@@ -405,7 +439,7 @@ just fmt
 ./test/integration-test.sh
 
 # Cleanup
-docker compose down -v
+docker compose -f docker/docker-compose.yml down -v
 ```
 
 See [test/README.md](test/README.md) for detailed testing documentation.

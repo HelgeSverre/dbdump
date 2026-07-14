@@ -86,6 +86,43 @@ func TestStartSSHTunnelRequiresSSHClient(t *testing.T) {
 	}
 }
 
+func TestStartSSHTunnelDoesNotHangWhenSSHExitsBeforeReady(t *testing.T) {
+	originalLookPath := execLookPath
+	originalExecCommandContext := execCommandContext
+	execLookPath = func(string) (string, error) { return "/usr/bin/ssh", nil }
+	execCommandContext = func(ctx context.Context, name string, args ...string) *exec.Cmd {
+		// ssh exits immediately without ever opening the forward port.
+		return exec.CommandContext(ctx, "sh", "-c", "echo 'permission denied' >&2; exit 255")
+	}
+	t.Cleanup(func() {
+		execLookPath = originalLookPath
+		execCommandContext = originalExecCommandContext
+	})
+
+	conn := &Connection{
+		Host: "db.internal", Port: 3306, User: "root",
+		SSH: SSHConfig{Host: "bastion.example.com", Port: 22, User: "deploy"},
+	}
+
+	done := make(chan error, 1)
+	go func() {
+		_, err := StartSSHTunnel(context.Background(), conn)
+		done <- err
+	}()
+
+	select {
+	case err := <-done:
+		if err == nil {
+			t.Fatal("expected an error when ssh exits before the tunnel is ready")
+		}
+		if !strings.Contains(err.Error(), "ssh tunnel exited before becoming ready") {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	case <-time.After(8 * time.Second):
+		t.Fatal("StartSSHTunnel hung when ssh exited before becoming ready")
+	}
+}
+
 func TestHelperSSHTunnelProcess(t *testing.T) {
 	if os.Getenv("GO_WANT_HELPER_SSH_TUNNEL") != "1" {
 		return

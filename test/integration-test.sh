@@ -55,7 +55,7 @@ log_error() {
 cleanup() {
     rm -f /tmp/test_*.sql /tmp/custom_dump.sql
     if [ "$STARTED_LOCAL_DOCKER" -eq 1 ]; then
-        docker compose down >/dev/null 2>&1 || true
+        docker compose -f docker/docker-compose.yml down >/dev/null 2>&1 || true
     fi
 }
 
@@ -222,7 +222,8 @@ test_cli_features() {
     # Test 11: List command
     run_test "List command" "
         export DBDUMP_MYSQL_PWD=testpass123
-        ./bin/dbdump list -H 127.0.0.1 -P $port -u root -d testdb | grep -q 'users'
+        list_out=\$(./bin/dbdump list -H 127.0.0.1 -P $port -u root -d testdb)
+        grep -q 'users' <<<\"\$list_out\"
     "
     
     # Test 12: Dry run
@@ -255,12 +256,12 @@ if [ -z "${CI:-}" ]; then
     if [ -n "${TEST_QUICK:-}" ]; then
         log_info "Starting Docker Compose for quick integration test..."
         STARTED_LOCAL_DOCKER=1
-        docker compose up -d mysql80
+        docker compose -f docker/docker-compose.yml up -d mysql80
         echo ""
         wait_for_db mysql80 3308 || exit 1
     else
         log_info "Starting Docker Compose..."
-        docker compose up -d
+        docker compose -f docker/docker-compose.yml up -d
         echo ""
 
         # Wait for all databases
@@ -322,16 +323,16 @@ if [ $TESTS_FAILED -eq 0 ]; then
     log_info "All tests passed! ✓"
     echo ""
     if [ -z "${CI:-}" ]; then
-        echo "To stop Docker containers: docker compose down"
-        echo "To cleanup volumes: docker compose down -v"
+        echo "To stop Docker containers: docker compose -f docker/docker-compose.yml down"
+        echo "To cleanup volumes: docker compose -f docker/docker-compose.yml down -v"
     fi
     exit 0
 else
     log_error "Some tests failed!"
     echo ""
     if [ -z "${CI:-}" ]; then
-        echo "To view logs: docker compose logs [mysql57|mysql80|mysql84|mariadb]"
-        echo "To stop: docker compose down"
+        echo "To view logs: docker compose -f docker/docker-compose.yml logs [mysql57|mysql80|mysql84|mariadb]"
+        echo "To stop: docker compose -f docker/docker-compose.yml down"
     fi
     exit 1
 fi
