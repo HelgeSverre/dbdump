@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **[CLI]** Added a `version` subcommand and `--version` flag. Release builds stamp the version via ldflags; other builds autopopulate from Go's embedded build info (module version for `go install ...@vX.Y.Z`, VCS commit/time for local builds).
 - **[Connectivity]** Added TLS/SSL support via `--tls-mode` (disabled/preferred/require/verify-ca/verify-identity), `--tls-ca`, `--tls-cert`, `--tls-key`, `--tls-skip-verify`, and `--tls-server-name`. Applies to both dbdump's inspection connection and the `mysqldump` subprocess (with a MariaDB `--ssl` fallback), and the settings persist in connection profiles. With no `--tls-*` flag, behavior is unchanged.
 - **[Dump]** `--dry-run` now prints the full plan: each table's size and row count, whether its data will be dumped or only its structure preserved, totals, and the resolved output path/compression — instead of just the excluded-table list.
 - **[Profiles]** Implemented connection profiles end to end: `dbdump config add <name>` saves the current connection flags, `dbdump config remove <name>` deletes a profile, and `--profile <name>` loads a saved profile for `dump`/`list`. Explicit flags override profile values; the password falls back to `DBDUMP_MYSQL_PWD`/`MYSQL_PWD` when unset. The profiles file is written with 0600 permissions.

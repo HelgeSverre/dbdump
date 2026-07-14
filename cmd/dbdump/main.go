@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -81,6 +82,47 @@ type dumpFlags struct {
 	Compression     string
 }
 
+// Build information, overridden at release time via -ldflags "-X main.Version=..."
+var (
+	Version   = "dev"
+	Commit    = "none"
+	BuildTime = "unknown"
+)
+
+// versionInfo resolves the build metadata. Release builds set it via ldflags;
+// otherwise it falls back to Go's embedded build info, so `go install ...@vX.Y.Z`
+// reports the module version and local `go build` reports the VCS commit and time.
+func versionInfo() (version, commit, buildTime string) {
+	version, commit, buildTime = Version, Commit, BuildTime
+	if version != "dev" {
+		return version, commit, buildTime
+	}
+
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return version, commit, buildTime
+	}
+	if v := info.Main.Version; v != "" && v != "(devel)" {
+		version = v
+	}
+	for _, setting := range info.Settings {
+		switch setting.Key {
+		case "vcs.revision":
+			if commit == "none" && setting.Value != "" {
+				commit = setting.Value
+				if len(commit) > 12 {
+					commit = commit[:12]
+				}
+			}
+		case "vcs.time":
+			if buildTime == "unknown" && setting.Value != "" {
+				buildTime = setting.Value
+			}
+		}
+	}
+	return version, commit, buildTime
+}
+
 func main() {
 	if err := newRootCmd().Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -91,12 +133,14 @@ func main() {
 func newRootCmd() *cobra.Command {
 	conn := &connectionFlags{}
 
+	version, _, _ := versionInfo()
 	rootCmd := &cobra.Command{
 		Use:   "dbdump",
 		Short: "Intelligent MySQL database dumping tool",
 		Long: `dbdump is a CLI tool for intelligent MySQL database dumping.
 It excludes noisy table data while preserving structure, making database
 dumps faster and more manageable for development environments.`,
+		Version: version,
 	}
 
 	rootCmd.PersistentFlags().StringVarP(&conn.Host, "host", "H", "127.0.0.1", "Database host")
@@ -121,8 +165,21 @@ dumps faster and more manageable for development environments.`,
 	rootCmd.AddCommand(newDumpCmd(conn))
 	rootCmd.AddCommand(newListCmd(conn))
 	rootCmd.AddCommand(newConfigCmd(conn))
+	rootCmd.AddCommand(newVersionCmd())
 
 	return rootCmd
+}
+
+func newVersionCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "version",
+		Short: "Print version information",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			version, commit, buildTime := versionInfo()
+			fmt.Printf("dbdump %s (commit %s, built %s)\n", version, commit, buildTime)
+			return nil
+		},
+	}
 }
 
 func newDumpCmd(conn *connectionFlags) *cobra.Command {

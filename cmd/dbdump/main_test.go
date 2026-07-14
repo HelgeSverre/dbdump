@@ -53,9 +53,13 @@ func TestNewRootCmdIncludesExpectedCommands(t *testing.T) {
 	}
 	slices.Sort(commandNames)
 
-	want := []string{"config", "dump", "list"}
+	want := []string{"config", "dump", "list", "version"}
 	if !reflect.DeepEqual(commandNames, want) {
 		t.Fatalf("unexpected commands: got %v want %v", commandNames, want)
+	}
+
+	if cmd.Version == "" {
+		t.Fatal("expected root command to expose a version for --version")
 	}
 
 	for _, flagName := range []string{"host", "port", "user", "password", "database"} {
