@@ -1,8 +1,8 @@
 package patterns
 
 import (
+	"fmt"
 	"path/filepath"
-	"strings"
 
 	"github.com/helgesverre/dbdump/internal/config"
 )
@@ -13,17 +13,25 @@ type Matcher struct {
 	patterns     []string
 }
 
-// NewMatcher creates a new Matcher from exclude config
-func NewMatcher(excludes config.ExcludeConfig) *Matcher {
+// NewMatcher creates a new Matcher from exclude config. It rejects malformed glob
+// patterns up front so a typo (e.g. "secrets[0-9") fails loudly instead of silently
+// un-excluding a table the user meant to exclude.
+func NewMatcher(excludes config.ExcludeConfig) (*Matcher, error) {
 	exactMap := make(map[string]bool)
 	for _, exact := range excludes.Exact {
 		exactMap[exact] = true
 	}
 
+	for _, pattern := range excludes.Patterns {
+		if _, err := filepath.Match(pattern, ""); err != nil {
+			return nil, fmt.Errorf("invalid exclude pattern %q: %w", pattern, err)
+		}
+	}
+
 	return &Matcher{
 		exactMatches: exactMap,
 		patterns:     excludes.Patterns,
-	}
+	}, nil
 }
 
 // Matches checks if a table name should be excluded
@@ -43,15 +51,14 @@ func (m *Matcher) Matches(tableName string) bool {
 	return false
 }
 
-// matchPattern matches a glob-style pattern against a string
-// Supports * wildcard (matches any sequence of characters)
+// matchPattern matches a glob-style pattern against a string.
+// Supports * and ? wildcards. Patterns are validated in NewMatcher, so an
+// ErrBadPattern here is treated as a non-match rather than silently changing
+// semantics to a substring check.
 func matchPattern(pattern, str string) bool {
-	// Use filepath.Match for glob-style matching
-	// This supports * and ? wildcards
 	matched, err := filepath.Match(pattern, str)
 	if err != nil {
-		// If pattern is invalid, fall back to simple contains check
-		return strings.Contains(str, strings.Trim(pattern, "*"))
+		return false
 	}
 	return matched
 }

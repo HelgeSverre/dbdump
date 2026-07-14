@@ -199,7 +199,10 @@ func runDump(connFlags connectionFlags, opts dumpFlags) error {
 		return err
 	}
 
-	matcher := patterns.NewMatcher(excludeConfig)
+	matcher, err := patterns.NewMatcher(excludeConfig)
+	if err != nil {
+		return err
+	}
 	tableNames := make([]string, len(tablesInfo))
 	for i, info := range tablesInfo {
 		tableNames[i] = info.Name

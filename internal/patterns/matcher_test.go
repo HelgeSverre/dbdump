@@ -10,9 +10,12 @@ import (
 func TestMatcherMatchesSuffixPattern(t *testing.T) {
 	t.Parallel()
 
-	matcher := NewMatcher(config.ExcludeConfig{
+	matcher, err := NewMatcher(config.ExcludeConfig{
 		Patterns: []string{"*_cache"},
 	})
+	if err != nil {
+		t.Fatalf("NewMatcher returned error: %v", err)
+	}
 
 	if !matcher.Matches("redis_cache") {
 		t.Fatal("expected suffix glob to match cache table")
@@ -23,17 +26,28 @@ func TestMatcherMatchesSuffixPattern(t *testing.T) {
 	}
 }
 
-func TestFilterIncludedExcludesConfiguredTables(t *testing.T) {
+func TestNewMatcherRejectsInvalidPattern(t *testing.T) {
 	t.Parallel()
 
-	matcher := NewMatcher(config.ExcludeConfig{
+	if _, err := NewMatcher(config.ExcludeConfig{Patterns: []string{"secrets[0-9"}}); err == nil {
+		t.Fatal("expected malformed glob pattern to be rejected")
+	}
+}
+
+func TestFilterTablesExcludesConfiguredTables(t *testing.T) {
+	t.Parallel()
+
+	matcher, err := NewMatcher(config.ExcludeConfig{
 		Exact:    []string{"audits"},
 		Patterns: []string{"temp_*"},
 	})
+	if err != nil {
+		t.Fatalf("NewMatcher returned error: %v", err)
+	}
 
-	got := matcher.FilterIncluded([]string{"users", "audits", "temp_jobs"})
-	want := []string{"users"}
+	got := matcher.FilterTables([]string{"users", "audits", "temp_jobs"})
+	want := []string{"audits", "temp_jobs"}
 	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("unexpected included tables: got %v want %v", got, want)
+		t.Fatalf("unexpected excluded tables: got %v want %v", got, want)
 	}
 }
