@@ -43,7 +43,6 @@ var (
 	runTableSelection = ui.RunInteractiveSelection
 	isTerminal        = func(fd int) bool { return term.IsTerminal(fd) }
 	nowTime           = time.Now
-	printError        = ui.PrintError
 	printInfo         = ui.PrintInfo
 	printSuccess      = ui.PrintSuccess
 	printSummary      = ui.PrintSummary
@@ -172,6 +171,12 @@ func runDump(connFlags connectionFlags, opts dumpFlags) error {
 		return err
 	}
 
+	// Validate the compression flag before doing any work so a bad value fails
+	// fast instead of after connecting and running interactive selection.
+	if _, err := database.ResolveCompressionFormat(opts.OutputFile, opts.Compression); err != nil {
+		return err
+	}
+
 	conn := connFlags.toConnection()
 	stopTunnel, err := startSSHTunnel(context.Background(), conn)
 	if err != nil {
@@ -193,6 +198,14 @@ func runDump(connFlags connectionFlags, opts dumpFlags) error {
 	}
 
 	printInfo(fmt.Sprintf("Found %d tables", len(tablesInfo)))
+
+	// A real dump needs mysqldump; check it before asking the user to make
+	// selections so a missing binary doesn't waste their interactive input.
+	if !opts.DryRun {
+		if err := checkMySQLDump(); err != nil {
+			return fmt.Errorf("mysqldump is required but not found in PATH: %w", err)
+		}
+	}
 
 	excludeConfig, err := buildExcludeConfig(opts)
 	if err != nil {
@@ -232,10 +245,6 @@ func runDump(connFlags connectionFlags, opts dumpFlags) error {
 		return nil
 	}
 
-	if err := checkMySQLDump(); err != nil {
-		return fmt.Errorf("mysqldump is required but not found in PATH: %w", err)
-	}
-
 	printInfo(fmt.Sprintf("Starting dump to %s", outputPath))
 
 	dumper := newDumper(&database.DumpOptions{
@@ -248,7 +257,6 @@ func runDump(connFlags connectionFlags, opts dumpFlags) error {
 
 	result, err := dumper.Dump()
 	if err != nil {
-		printError(err)
 		return err
 	}
 

@@ -360,7 +360,6 @@ func TestRunDumpSuccessInvokesDumper(t *testing.T) {
 	})
 	stubPrintInfo(t, func(string) {})
 	stubPrintSuccess(t, func(string) {})
-	stubPrintError(t, func(error) {})
 	stubCheckMySQLDump(t, func() error { return nil })
 	stubStartSSHTunnel(t, func(ctx context.Context, conn *database.Connection) (func() error, error) {
 		return nil, nil
@@ -434,6 +433,47 @@ func TestRunDumpReturnsFeatureCheckError(t *testing.T) {
 	}
 }
 
+func TestRunDumpRejectsInvalidCompressionBeforeConnecting(t *testing.T) {
+	stubOpenInspection(t, func(*database.Connection) (inspectionSession, tableInspector, error) {
+		t.Fatal("should not connect when the compression flag is invalid")
+		return nil, nil, nil
+	})
+
+	err := runDump(
+		connectionFlags{Host: "127.0.0.1", Port: 3306, User: "root", Database: "testdb"},
+		dumpFlags{AutoMode: true, Compression: "brotli"},
+	)
+	if err == nil || !strings.Contains(err.Error(), "unsupported compression") {
+		t.Fatalf("expected unsupported compression error, got %v", err)
+	}
+}
+
+func TestRunDumpChecksMySQLDumpBeforeSelection(t *testing.T) {
+	session := &fakeSession{}
+	stubOpenInspection(t, func(conn *database.Connection) (inspectionSession, tableInspector, error) {
+		return session, fakeInspector{tables: []database.TableInfo{{Name: "users"}}}, nil
+	})
+	stubPrintInfo(t, func(string) {})
+	stubPrintSuccess(t, func(string) {})
+	stubStartSSHTunnel(t, func(ctx context.Context, conn *database.Connection) (func() error, error) {
+		return nil, nil
+	})
+	stubTerminalCheck(t, func(int) bool { return true })
+	stubTableSelection(t, func([]database.TableInfo, []string) ([]string, error) {
+		t.Fatal("interactive selection must not run when mysqldump is missing")
+		return nil, nil
+	})
+	stubCheckMySQLDump(t, func() error { return errors.New("missing binary") })
+
+	err := runDump(connectionFlags{Host: "127.0.0.1", Port: 3306, User: "root", Database: "testdb"}, dumpFlags{})
+	if err == nil || !strings.Contains(err.Error(), "mysqldump is required but not found in PATH") {
+		t.Fatalf("expected mysqldump error, got %v", err)
+	}
+	if !session.closed {
+		t.Fatal("expected session to be closed")
+	}
+}
+
 func TestRunDumpStartsSSHTunnel(t *testing.T) {
 	session := &fakeSession{}
 	stubOpenInspection(t, func(conn *database.Connection) (inspectionSession, tableInspector, error) {
@@ -444,7 +484,6 @@ func TestRunDumpStartsSSHTunnel(t *testing.T) {
 	})
 	stubPrintInfo(t, func(string) {})
 	stubPrintSuccess(t, func(string) {})
-	stubPrintError(t, func(error) {})
 	stubCheckMySQLDump(t, func() error { return nil })
 	stubNewDumper(t, func(opts *database.DumpOptions) dumpRunner {
 		return fakeDumper{result: &database.DumpResult{OutputFile: opts.OutputFile, FileSizeDisplay: "1 B"}}
@@ -581,15 +620,6 @@ func stubPrintSuccess(t *testing.T, fn func(string)) {
 	printSuccess = fn
 	t.Cleanup(func() {
 		printSuccess = original
-	})
-}
-
-func stubPrintError(t *testing.T, fn func(error)) {
-	t.Helper()
-	original := printError
-	printError = fn
-	t.Cleanup(func() {
-		printError = original
 	})
 }
 
