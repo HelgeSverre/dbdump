@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **[Connectivity]** Fixed an indefinite hang when the SSH tunnel process exited before becoming ready (bad key, DNS failure, `ExitOnForwardFailure`): tunnel shutdown no longer deadlocks and the underlying error is surfaced. Also fixed a data race on the ssh stderr buffer.
+- **[CLI]** An external `SIGTERM`/`SIGINT` (or kill) during interactive table selection now cancels the dump instead of proceeding with a full one; a selection is honored only when explicitly confirmed with Enter.
+- **[Exclusions]** A malformed exclude glob (e.g. `secrets[0-9`) is now rejected up front instead of silently un-excluding the table.
+- **[Config]** Config files are decoded strictly: an unknown or misspelled key (e.g. `excludes:`) now errors instead of silently dropping the user's excludes.
+- **[CLI]** The `--compress` value and `mysqldump` availability are validated before interactive selection, so invalid input fails fast without discarding the user's choices.
+- **[CLI]** A runtime dump failure is no longer printed twice across stdout and stderr.
+- **[Dump]** Interrupt/termination signals are trapped across the whole dump, including the finalize/rename window, so an interrupt no longer orphans `.tmp` files.
+- **[Inspect]** `formatBytes` now reports petabyte-scale sizes correctly (previously 1024× too small).
+
+### Changed
+- **[Profiles]** Removed the unusable `password` field from connection profiles; profiles remain display-only (no `--profile` selection yet). Existing `profiles.yaml` files keep loading, with the key ignored.
+
+### Removed
+- **[Internal]** Removed dead code (unused inspector/connection/matcher helpers and the unreachable dry-run path) and de-duplicated the `mysqldump` compatibility-flag handling; no user-facing behavior change.
+
+### Dependencies
+- Bumped `golang.org/x/term` from 0.44.0 to 0.45.0 (and indirect `golang.org/x/sys` to 0.47.0)
+
 ## [1.3.2] - 2026-07-06
 
 ### Dependencies
