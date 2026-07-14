@@ -643,11 +643,39 @@ zstd -dc dump_file.sql.zst | mysql -u root -p mydb</code></pre>
             <a href="https://github.com/helgesverre/dbdump/releases">Releases</a>
             <span class="sep">|</span>
             <a href="https://github.com/helgesverre/dbdump/blob/main/LICENSE">MIT License</a>
+            <span class="sep">|</span>
+            <a href="/llms.txt">llms.txt</a>
         </p>
         <p class="credit">Built by <a href="https://github.com/helgesverre">Helge Sverre</a></p>
     </footer>
 
     <script>
+        // Minimal shell syntax highlighting for code snippets. Operates on the
+        // decoded text and escapes every piece, so it is safe against HTML in the
+        // snippets and leaves the copy buttons (which use data-copy) untouched.
+        (() => {
+            const esc = s => s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+            const re = /(#[^\n]*)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|(^|[\s=])(--?[A-Za-z][\w-]*)/g;
+            const highlight = code => {
+                let out = '', last = 0, m;
+                while ((m = re.exec(code)) !== null) {
+                    out += esc(code.slice(last, m.index));
+                    if (m[1] !== undefined) {
+                        out += '<span class="tok-comment">' + esc(m[1]) + '</span>';
+                    } else if (m[2] !== undefined) {
+                        out += '<span class="tok-string">' + esc(m[2]) + '</span>';
+                    } else {
+                        out += esc(m[3]) + '<span class="tok-flag">' + esc(m[4]) + '</span>';
+                    }
+                    last = m.index + m[0].length;
+                }
+                return out + esc(code.slice(last));
+            };
+            document.querySelectorAll('.code-block pre code').forEach(el => {
+                el.innerHTML = highlight(el.textContent);
+            });
+        })();
+
         // Copy button functionality
         document.querySelectorAll('.copy-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
