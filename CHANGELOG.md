@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-07-14
+
 ### Added
 - **[CLI]** Added a `version` subcommand and `--version` flag. Release builds stamp the version via ldflags; other builds autopopulate from Go's embedded build info (module version for `go install ...@vX.Y.Z`, VCS commit/time for local builds).
 - **[Connectivity]** Added TLS/SSL support via `--tls-mode` (disabled/preferred/require/verify-ca/verify-identity), `--tls-ca`, `--tls-cert`, `--tls-key`, `--tls-skip-verify`, and `--tls-server-name`. Applies to both dbdump's inspection connection and the `mysqldump` subprocess (with a MariaDB `--ssl` fallback), and the settings persist in connection profiles. With no `--tls-*` flag, behavior is unchanged.
@@ -336,7 +338,8 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ---
 
 <!-- Version comparison links -->
-[Unreleased]: https://github.com/helgesverre/dbdump/compare/v1.3.2...HEAD
+[Unreleased]: https://github.com/helgesverre/dbdump/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/helgesverre/dbdump/compare/v1.3.2...v1.4.0
 [1.3.2]: https://github.com/helgesverre/dbdump/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/helgesverre/dbdump/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/helgesverre/dbdump/compare/v1.2.0...v1.3.0
