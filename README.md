@@ -108,6 +108,10 @@ cd dbdump
 just install
 ```
 
+`just install` builds and installs to `~/.local/bin` (no sudo); pass a
+destination to override, e.g. `just install /usr/local/bin`. Ensure the target
+directory is on your `PATH`.
+
 Requires Go 1.26+ and [just](https://github.com/casey/just).
 
 ## Quick Start

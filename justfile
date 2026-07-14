@@ -42,11 +42,18 @@ build-all:
     @ls -lh {{build_dir}}/
 
 [group('build')]
-[doc('Install the binary to /usr/local/bin')]
-install: build
-    @echo "Installing {{binary_name}} to /usr/local/bin..."
-    sudo cp {{build_dir}}/{{binary_name}} /usr/local/bin/
-    @echo "Installation complete!"
+[doc('Install the binary to ~/.local/bin (no sudo)')]
+install dest="~/.local/bin": build
+    mkdir -p {{dest}}
+    install -m 0755 {{build_dir}}/{{binary_name}} {{dest}}/{{binary_name}}
+    @echo "Installed {{binary_name}} to {{dest}}/{{binary_name}}"
+    @echo "Ensure {{dest}} is on your PATH."
+
+[group('build')]
+[doc('Uninstall the binary from ~/.local/bin')]
+uninstall dest="~/.local/bin":
+    rm -f {{dest}}/{{binary_name}}
+    @echo "Removed {{dest}}/{{binary_name}}"
 
 [group('build')]
 [doc('Remove build artifacts')]
