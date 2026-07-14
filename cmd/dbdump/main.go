@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -268,12 +269,7 @@ func runDump(connFlags connectionFlags, opts dumpFlags) error {
 	}
 
 	if opts.DryRun {
-		fmt.Println("\nDry run - would exclude the following tables:")
-		for _, table := range finalExcludes {
-			fmt.Printf("  - %s\n", table)
-		}
-		fmt.Printf("\nWould create dump file: %s\n", outputPath)
-		return nil
+		return writeDryRunPlan(os.Stdout, tablesInfo, finalExcludes, outputPath, opts.Compression)
 	}
 
 	printInfo(fmt.Sprintf("Starting dump to %s", outputPath))
@@ -544,6 +540,52 @@ func resolveExcludes(tables []database.TableInfo, preSelected []string, autoMode
 	}
 
 	return selected, nil
+}
+
+// writeDryRunPlan renders the full dump plan without writing any data: every table
+// with its size/row count and whether its data will be dumped or only its
+// structure preserved, plus totals and the resolved output path and compression.
+func writeDryRunPlan(w io.Writer, tables []database.TableInfo, excludes []string, outputPath, compression string) error {
+	format, err := database.ResolveCompressionFormat(outputPath, compression)
+	if err != nil {
+		return err
+	}
+
+	excluded := make(map[string]struct{}, len(excludes))
+	for _, name := range excludes {
+		excluded[name] = struct{}{}
+	}
+
+	lines := []string{
+		"\nDry run — no data will be written.\n",
+		fmt.Sprintf("\nOutput: %s  (compression: %s)\n\n", outputPath, format),
+		fmt.Sprintf("%-40s %12s %14s  %s\n", "TABLE", "SIZE", "ROWS", "MODE"),
+	}
+
+	var totalSize, skippedData int64
+	excludedCount := 0
+	for _, table := range tables {
+		mode := "data + structure"
+		if _, ok := excluded[table.Name]; ok {
+			mode = "structure only"
+			excludedCount++
+			skippedData += table.DataSize
+		}
+		lines = append(lines, fmt.Sprintf("%-40s %12s %14d  %s\n", table.Name, table.SizeDisplay, table.RowCount, mode))
+		totalSize += table.TotalSize
+	}
+
+	lines = append(lines,
+		"\nSummary:\n",
+		fmt.Sprintf("  %d tables, %d excluded from data (structure preserved)\n", len(tables), excludedCount),
+		fmt.Sprintf("  Total size across all tables: %s\n", database.FormatBytes(totalSize)),
+	)
+	if excludedCount > 0 {
+		lines = append(lines, fmt.Sprintf("  Data skipped for excluded tables: ~%s\n", database.FormatBytes(skippedData)))
+	}
+
+	_, err = io.WriteString(w, strings.Join(lines, ""))
+	return err
 }
 
 func resolveOutputPath(databaseName, configuredPath, compression string) (string, error) {

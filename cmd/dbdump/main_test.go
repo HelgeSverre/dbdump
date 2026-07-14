@@ -362,6 +362,34 @@ func writeProfiles(t *testing.T, contents string) {
 	}
 }
 
+func TestWriteDryRunPlanShowsSizesAndModes(t *testing.T) {
+	tables := []database.TableInfo{
+		{Name: "users", TotalSize: 3 * 1024 * 1024, DataSize: 2 * 1024 * 1024, RowCount: 1500, SizeDisplay: "3.0 MB"},
+		{Name: "sessions", TotalSize: 800 * 1024, DataSize: 700 * 1024, RowCount: 12000, SizeDisplay: "800.0 KB"},
+	}
+
+	var buf strings.Builder
+	if err := writeDryRunPlan(&buf, tables, []string{"sessions"}, "/tmp/backup.sql.gz", "gzip"); err != nil {
+		t.Fatalf("writeDryRunPlan returned error: %v", err)
+	}
+	out := buf.String()
+
+	for _, want := range []string{
+		"/tmp/backup.sql.gz",
+		"compression: gzip",
+		"users",
+		"data + structure",
+		"sessions",
+		"structure only",
+		"2 tables",
+		"1 excluded from data",
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("expected dry-run plan to contain %q, got:\n%s", want, out)
+		}
+	}
+}
+
 func TestRunConfigListPrintsProfiles(t *testing.T) {
 	homeDir := t.TempDir()
 	t.Setenv("HOME", homeDir)
@@ -451,7 +479,7 @@ func TestRunDumpDryRunPrintsPlan(t *testing.T) {
 		t.Fatal("expected session to be closed")
 	}
 
-	if !strings.Contains(output, "Dry run - would exclude the following tables:") || !strings.Contains(output, "audits") {
+	if !strings.Contains(output, "Dry run") || !strings.Contains(output, "audits") || !strings.Contains(output, "structure only") {
 		t.Fatalf("unexpected dry-run output: %q", output)
 	}
 	if !strings.Contains(output, "testdb_20260330_120000.sql.gz") {

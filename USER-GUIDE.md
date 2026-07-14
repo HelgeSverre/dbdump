@@ -297,7 +297,7 @@ dbdump dump [flags]
 | `--exclude` | - | Exclude specific table (repeatable) | - |
 | `--exclude-pattern` | - | Exclude pattern (repeatable) | - |
 | `--auto` | - | Use defaults without interaction | false |
-| `--dry-run` | - | Show what would be excluded without dumping | false |
+| `--dry-run` | - | Preview the full dump plan (per-table size/rows, data vs structure-only, totals, resolved output) without dumping | false |
 
 **Examples:**
 

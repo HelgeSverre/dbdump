@@ -71,6 +71,11 @@ func (i *Inspector) GetAllTablesInfo() ([]TableInfo, error) {
 	return tables, nil
 }
 
+// FormatBytes formats a byte count into a human-readable string (e.g. "1.2 MB").
+func FormatBytes(n int64) string {
+	return formatBytes(n)
+}
+
 // formatBytes formats byte size into human-readable format
 func formatBytes(bytes int64) string {
 	const unit = 1024
