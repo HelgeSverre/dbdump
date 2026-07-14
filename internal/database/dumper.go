@@ -74,6 +74,12 @@ func (d *Dumper) Dump() (result *DumpResult, err error) {
 		return d.dryRun()
 	}
 
+	// Trap interrupt/termination signals for the entire dump — including the
+	// finalize/rename window — so the deferred temp-file cleanup always runs
+	// instead of the process dying mid-write and orphaning a .tmp file.
+	ctx, stop := signalNotify(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	if err := validateDumpOutputPath(d.options.OutputFile); err != nil {
 		return nil, err
 	}
@@ -123,11 +129,11 @@ func (d *Dumper) Dump() (result *DumpResult, err error) {
 
 	writer := bufio.NewWriterSize(compressedWriter, 256*1024)
 
-	if err = d.dumpStructure(writer, defaultsFile); err != nil {
+	if err = d.dumpStructure(ctx, writer, defaultsFile); err != nil {
 		return nil, fmt.Errorf("failed to dump structure: %w", err)
 	}
 
-	if err = d.dumpData(writer, defaultsFile); err != nil {
+	if err = d.dumpData(ctx, writer, defaultsFile); err != nil {
 		return nil, fmt.Errorf("failed to dump data: %w", err)
 	}
 
@@ -282,10 +288,7 @@ func newCompressedWriter(target io.Writer, format string) (io.WriteCloser, error
 }
 
 // dumpStructure dumps the structure of all tables
-func (d *Dumper) dumpStructure(writer io.Writer, defaultsFile string) error {
-	ctx, stop := signalNotify(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
+func (d *Dumper) dumpStructure(ctx context.Context, writer io.Writer, defaultsFile string) error {
 	args := d.buildMySQLDumpArgs(defaultsFile)
 	args = append(args,
 		"--no-data",
@@ -318,10 +321,7 @@ func (d *Dumper) dumpStructure(writer io.Writer, defaultsFile string) error {
 }
 
 // dumpData dumps data for non-excluded tables
-func (d *Dumper) dumpData(writer io.Writer, defaultsFile string) error {
-	ctx, stop := signalNotify(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
+func (d *Dumper) dumpData(ctx context.Context, writer io.Writer, defaultsFile string) error {
 	args := d.buildMySQLDumpArgs(defaultsFile)
 	args = append(args,
 		"--no-create-info",

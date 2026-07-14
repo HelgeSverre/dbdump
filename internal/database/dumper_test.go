@@ -289,6 +289,52 @@ func TestDumpReplacesExistingOutputViaFallbackPath(t *testing.T) {
 	}
 }
 
+func TestDumpUsesSingleSignalContextAcrossDump(t *testing.T) {
+	resetMySQLDumpFeatures()
+
+	// Dump should install one signal-aware context that spans the whole run
+	// (including finalize/rename), and hand that same context to every
+	// mysqldump subprocess — rather than a per-step context that leaves the
+	// finalize window unguarded.
+	var trapCtx context.Context
+	origSignal := signalNotify
+	signalNotify = func(parent context.Context, _ ...os.Signal) (context.Context, context.CancelFunc) {
+		ctx, cancel := context.WithCancel(parent)
+		trapCtx = ctx
+		return ctx, cancel
+	}
+	t.Cleanup(func() { signalNotify = origSignal })
+
+	var cmdContexts []context.Context
+	restore := stubMySQLDump(t, func(ctx context.Context, name string, args ...string) *exec.Cmd {
+		cmdContexts = append(cmdContexts, ctx)
+		return exec.CommandContext(ctx, "sh", "-c", "printf 'x'")
+	})
+	defer restore()
+
+	outputFile := filepath.Join(t.TempDir(), "dump.sql")
+	dumper := NewDumper(&DumpOptions{
+		Connection: &Connection{Host: "127.0.0.1", Port: 3306, User: "root", Database: "testdb"},
+		OutputFile: outputFile,
+	})
+
+	if _, err := dumper.Dump(); err != nil {
+		t.Fatalf("Dump returned error: %v", err)
+	}
+
+	if trapCtx == nil {
+		t.Fatal("expected Dump to install a signal-aware context")
+	}
+	if len(cmdContexts) != 2 {
+		t.Fatalf("expected two mysqldump invocations, got %d", len(cmdContexts))
+	}
+	for i, ctx := range cmdContexts {
+		if ctx != trapCtx {
+			t.Fatalf("mysqldump invocation %d did not use the dump-scoped signal context", i)
+		}
+	}
+}
+
 func TestGetMySQLDumpFeaturesReturnsHelpError(t *testing.T) {
 	t.Helper()
 
