@@ -43,7 +43,6 @@ type DumpOptions struct {
 	Connection    *Connection
 	ExcludeTables []string
 	OutputFile    string
-	DryRun        bool
 	Compression   string
 }
 
@@ -69,10 +68,6 @@ type DumpResult struct {
 // Dump performs the database dump
 func (d *Dumper) Dump() (result *DumpResult, err error) {
 	startTime := time.Now()
-
-	if d.options.DryRun {
-		return d.dryRun()
-	}
 
 	// Trap interrupt/termination signals for the entire dump — including the
 	// finalize/rename window — so the deferred temp-file cleanup always runs
@@ -296,15 +291,9 @@ func (d *Dumper) dumpStructure(ctx context.Context, writer io.Writer, defaultsFi
 		"--events",
 	)
 
-	features, err := getMySQLDumpFeatures()
+	args, err := appendMySQLDumpFeatureArgs(args)
 	if err != nil {
 		return err
-	}
-	if features.SetGTIDPurged {
-		args = append(args, "--set-gtid-purged=OFF")
-	}
-	if features.ColumnStatistics {
-		args = append(args, "--column-statistics=0")
 	}
 
 	args = append(args, d.options.Connection.Database)
@@ -330,15 +319,9 @@ func (d *Dumper) dumpData(ctx context.Context, writer io.Writer, defaultsFile st
 		"--skip-events",
 	)
 
-	features, err := getMySQLDumpFeatures()
+	args, err := appendMySQLDumpFeatureArgs(args)
 	if err != nil {
 		return err
-	}
-	if features.SetGTIDPurged {
-		args = append(args, "--set-gtid-purged=OFF")
-	}
-	if features.ColumnStatistics {
-		args = append(args, "--column-statistics=0")
 	}
 
 	for _, table := range d.options.ExcludeTables {
@@ -359,11 +342,27 @@ func (d *Dumper) dumpData(ctx context.Context, writer io.Writer, defaultsFile st
 	return nil
 }
 
+// appendMySQLDumpFeatureArgs appends version-dependent compatibility flags shared
+// by the structure and data passes, so a new flag only has to be added once.
+func appendMySQLDumpFeatureArgs(args []string) ([]string, error) {
+	features, err := getMySQLDumpFeatures()
+	if err != nil {
+		return nil, err
+	}
+	if features.SetGTIDPurged {
+		args = append(args, "--set-gtid-purged=OFF")
+	}
+	if features.ColumnStatistics {
+		args = append(args, "--column-statistics=0")
+	}
+	return args, nil
+}
+
 // buildMySQLDumpArgs builds common mysqldump arguments.
-func (d *Dumper) buildMySQLDumpArgs(defaultsFile ...string) []string {
+func (d *Dumper) buildMySQLDumpArgs(defaultsFile string) []string {
 	args := []string{}
-	if len(defaultsFile) > 0 && defaultsFile[0] != "" {
-		args = append(args, "--defaults-extra-file="+defaultsFile[0])
+	if defaultsFile != "" {
+		args = append(args, "--defaults-extra-file="+defaultsFile)
 	}
 
 	args = append(args,
@@ -456,18 +455,6 @@ func resetMySQLDumpFeatures() {
 	mysqlDumpFeaturesOnce = sync.Once{}
 	mysqlDumpFeatures = mysqlDumpFeatureSet{}
 	mysqlDumpFeaturesErr = nil
-}
-
-// dryRun performs a dry run showing what would be dumped
-func (d *Dumper) dryRun() (*DumpResult, error) {
-	result := &DumpResult{
-		OutputFile:     d.options.OutputFile,
-		Duration:       0,
-		ExcludedTables: d.options.ExcludeTables,
-		FileSize:       0,
-	}
-
-	return result, nil
 }
 
 // CheckMySQLDump verifies that mysqldump is available

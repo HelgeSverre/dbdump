@@ -119,7 +119,7 @@ func resolveTunnelLocalPort(requested int) (int, error) {
 
 	addr, ok := listener.Addr().(*net.TCPAddr)
 	if !ok {
-		return 0, fmt.Errorf("failed to inspect local tunnel port")
+		return 0, errors.New("failed to inspect local tunnel port")
 	}
 
 	return addr.Port, nil

@@ -25,65 +25,6 @@ func NewInspector(db *sql.DB) *Inspector {
 	return &Inspector{db: db}
 }
 
-// ListTables returns a list of all tables in the database
-func (i *Inspector) ListTables() ([]string, error) {
-	query := "SHOW TABLES"
-	rows, err := i.db.Query(query)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list tables: %w", err)
-	}
-	defer func() {
-		_ = rows.Close()
-	}()
-
-	var tables []string
-	for rows.Next() {
-		var table string
-		if err := rows.Scan(&table); err != nil {
-			return nil, fmt.Errorf("failed to scan table name: %w", err)
-		}
-		tables = append(tables, table)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating tables: %w", err)
-	}
-
-	return tables, nil
-}
-
-// GetTableInfo retrieves detailed information about a table
-func (i *Inspector) GetTableInfo(tableName string) (*TableInfo, error) {
-	query := `
-		SELECT
-			table_name,
-			IFNULL(table_rows, 0) as row_count,
-			IFNULL(data_length, 0) as data_size,
-			IFNULL(index_length, 0) as index_size,
-			IFNULL(data_length + index_length, 0) as total_size
-		FROM information_schema.tables
-		WHERE table_schema = DATABASE()
-		AND table_name = ?
-	`
-
-	var info TableInfo
-	err := i.db.QueryRow(query, tableName).Scan(
-		&info.Name,
-		&info.RowCount,
-		&info.DataSize,
-		&info.IndexSize,
-		&info.TotalSize,
-	)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to get table info: %w", err)
-	}
-
-	info.SizeDisplay = formatBytes(info.TotalSize)
-
-	return &info, nil
-}
-
 // GetAllTablesInfo retrieves information for all tables
 func (i *Inspector) GetAllTablesInfo() ([]TableInfo, error) {
 	query := `

@@ -50,15 +50,3 @@ func (c *Connection) Connect() (*sql.DB, error) {
 
 	return db, nil
 }
-
-// TestConnection tests if the connection is valid
-func (c *Connection) TestConnection() error {
-	db, err := c.Connect()
-	if err != nil {
-		return err
-	}
-	defer func() {
-		_ = db.Close()
-	}()
-	return nil
-}

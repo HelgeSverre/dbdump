@@ -9,7 +9,7 @@ import (
 
 // Matcher handles table name pattern matching
 type Matcher struct {
-	exactMatches map[string]bool
+	exactMatches map[string]struct{}
 	patterns     []string
 }
 
@@ -17,9 +17,9 @@ type Matcher struct {
 // patterns up front so a typo (e.g. "secrets[0-9") fails loudly instead of silently
 // un-excluding a table the user meant to exclude.
 func NewMatcher(excludes config.ExcludeConfig) (*Matcher, error) {
-	exactMap := make(map[string]bool)
+	exactMap := make(map[string]struct{})
 	for _, exact := range excludes.Exact {
-		exactMap[exact] = true
+		exactMap[exact] = struct{}{}
 	}
 
 	for _, pattern := range excludes.Patterns {
@@ -37,7 +37,7 @@ func NewMatcher(excludes config.ExcludeConfig) (*Matcher, error) {
 // Matches checks if a table name should be excluded
 func (m *Matcher) Matches(tableName string) bool {
 	// Check exact matches first (faster)
-	if m.exactMatches[tableName] {
+	if _, ok := m.exactMatches[tableName]; ok {
 		return true
 	}
 
@@ -72,15 +72,4 @@ func (m *Matcher) FilterTables(tables []string) []string {
 		}
 	}
 	return excluded
-}
-
-// FilterIncluded returns only tables that should NOT be excluded (data should be dumped)
-func (m *Matcher) FilterIncluded(tables []string) []string {
-	var included []string
-	for _, table := range tables {
-		if !m.Matches(table) {
-			included = append(included, table)
-		}
-	}
-	return included
 }

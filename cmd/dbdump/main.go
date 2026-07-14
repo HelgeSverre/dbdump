@@ -251,7 +251,6 @@ func runDump(connFlags connectionFlags, opts dumpFlags) error {
 		Connection:    conn,
 		ExcludeTables: finalExcludes,
 		OutputFile:    outputPath,
-		DryRun:        opts.DryRun,
 		Compression:   opts.Compression,
 	})
 
@@ -340,10 +339,10 @@ func (c connectionFlags) withResolvedPassword() connectionFlags {
 
 func (c connectionFlags) validate() error {
 	if c.User == "" {
-		return fmt.Errorf("database user is required (use -u or --user)")
+		return errors.New("database user is required (use -u or --user)")
 	}
 	if c.Database == "" {
-		return fmt.Errorf("database name is required (use -d or --database)")
+		return errors.New("database name is required (use -d or --database)")
 	}
 	return nil
 }
@@ -453,7 +452,7 @@ func resolveOutputPath(databaseName, configuredPath, compression string) (string
 	return absPath, nil
 }
 
-func closeDB(db interface{ Close() error }) {
+func closeDB(db inspectionSession) {
 	if err := db.Close(); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: failed to close database connection: %v\n", err)
 	}

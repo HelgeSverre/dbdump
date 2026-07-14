@@ -116,12 +116,12 @@ func MergeExcludes(defaults *DefaultConfig, project *Config) ExcludeConfig {
 
 // UniqueStrings removes duplicate strings from a slice while preserving order.
 func UniqueStrings(input []string) []string {
-	seen := make(map[string]bool)
+	seen := make(map[string]struct{})
 	result := make([]string, 0)
 
 	for _, str := range input {
-		if !seen[str] {
-			seen[str] = true
+		if _, ok := seen[str]; !ok {
+			seen[str] = struct{}{}
 			result = append(result, str)
 		}
 	}
