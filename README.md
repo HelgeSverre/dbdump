@@ -370,7 +370,6 @@ Result: A complete database dump with empty noisy tables.
 
 - **[USER-GUIDE.md](USER-GUIDE.md)** - Comprehensive user guide with detailed configuration, examples, and
   troubleshooting
-- **[SECURITY.md](SECURITY.md)** - Security best practices and credential handling
 - **[CHANGELOG.md](CHANGELOG.md)** - Version history
 
 ### Developer Documentation

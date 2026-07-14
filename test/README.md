@@ -412,4 +412,4 @@ When adding new features, please:
 
 ---
 
-For more information, see the main [README.md](../README.md) and [SECURITY.md](../SECURITY.md).
+For more information, see the main [README.md](../README.md).

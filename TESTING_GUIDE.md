@@ -461,7 +461,6 @@ The generated test data includes:
 ## Further Reading
 
 - [test/README.md](test/README.md) - Detailed testing documentation
-- [SECURITY.md](SECURITY.md) - Security best practices
 
 ---
 

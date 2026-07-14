@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **[Profiles]** Removed the unusable `password` field from connection profiles; profiles remain display-only (no `--profile` selection yet). Existing `profiles.yaml` files keep loading, with the key ignored.
 
 ### Removed
+- **[Docs]** Removed `SECURITY.md` and all references to it; trimmed the roadmap to the items actually under consideration (TLS/SSL, a parallel-dumping spike).
 - **[Internal]** Removed dead code (unused inspector/connection/matcher helpers and the unreachable dry-run path) and de-duplicated the `mysqldump` compatibility-flag handling; no user-facing behavior change.
 
 ### Dependencies
@@ -65,7 +66,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **[Dump]** Switched the `mysqldump` helper to create a temporary `defaults-extra-file` and report feature detection failures instead of silently degrading.
-- **[Docs]** Synced the README, USER-GUIDE, SECURITY, TESTING_GUIDE, release docs, and workflows with current behavior, TLS limitations, and test counts.
+- **[Docs]** Synced the README, USER-GUIDE, TESTING_GUIDE, release docs, and workflows with current behavior, TLS limitations, and test counts.
 - **[Tests]** Added CLI-wide coverage and expanded integration assertions, raising total tooling coverage to 63.5%.
 
 ### Fixed
@@ -187,7 +188,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Data integrity tests (triggers, procedures, restoration)
   - Exclusion logic verification
 - **Comprehensive documentation**
-  - `SECURITY.md` - Security best practices and credential handling
 - Comprehensive benchmark suite (`scripts/benchmark.sh`)
   - Automated performance testing with statistical analysis
   - JSON output for programmatic analysis
@@ -286,7 +286,6 @@ See `BENCHMARKING.md` for detailed benchmark analysis and environmental factors.
 
 **Recommendations:**
 - Use `DBDUMP_MYSQL_PWD` environment variable instead of command-line `-p` flag
-- Review `SECURITY.md` for credential handling best practices
 - Use `make bench` to validate performance in your environment
 
 ## Migration Guides
@@ -316,20 +315,13 @@ dbdump is faster and more scriptable:
 - Progress tracking
 - Dry-run mode for verification
 
-## Future Roadmap
+## Roadmap
 
-### v1.3.0 (Planned)
-- Parallel table dumping (2-3x speedup)
-- Cloud storage integration (S3, GCS)
+### Planned
 - Native TLS/SSL connection support
 
-### v1.4.0 (Planned)
-- Data anonymization/masking
-- Incremental dumps
-- Binary format support
-- Import helper functionality
-
-<!-- Roadmap details to be added in future releases -->
+### Under investigation
+- Parallel table dumping — being spiked to assess whether a consistent snapshot is achievable at a worthwhile speedup
 
 ## Support
 
