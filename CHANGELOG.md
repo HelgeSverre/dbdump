@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **[Inspect]** `formatBytes` now reports petabyte-scale sizes correctly (previously 1024× too small).
 
 ### Changed
+- **[Performance]** The `--compress gzip` path now uses `klauspost/compress`'s gzip (already a dependency) instead of the standard library — roughly 5× faster deflate for about 4% larger output; the stream is still standard gzip. `zstd` is unchanged and remains the fastest option. Profiling showed dbdump's own code is negligible CPU (it pipes `mysqldump` bytes); compression was the only real hot spot.
 - **[Dev]** Consolidated Docker test infrastructure under `docker/` and added a re-runnable smoke test (`docker/smoke-test.sh`, `just smoke`) covering connection profiles across MySQL 5.7/8.0/8.4 + MariaDB and every TLS mode. `just install` now installs to `~/.local/bin` without sudo.
 
 ### Removed
