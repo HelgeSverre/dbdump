@@ -1,0 +1,59 @@
+# dbdump
+
+> Fast MySQL dump CLI that excludes noisy table DATA (audit logs, sessions, cache) while always preserving complete database structure, cutting dump time and size from hours/gigabytes to minutes.
+
+dbdump is a Go command-line tool that wraps `mysqldump` in a two-phase approach: it dumps the schema (CREATE TABLE) for ALL tables, then dumps row data only for the tables you keep. Excluded tables still exist in the output as empty tables, so foreign keys never break. Table selection is interactive by default (a TUI picker showing sizes) or fully non-interactive with `--auto` using smart defaults. Requires the `mysqldump` binary in PATH.
+
+## Docs
+
+- [README](https://github.com/helgesverre/dbdump/blob/main/README.md): Overview, installation, quick start, and command reference.
+- [User Guide](https://github.com/helgesverre/dbdump/blob/main/USER-GUIDE.md): Comprehensive configuration, examples, and troubleshooting.
+- [Changelog](https://github.com/helgesverre/dbdump/blob/main/CHANGELOG.md): Version history.
+- [Source](https://github.com/helgesverre/dbdump): GitHub repository.
+
+## Install
+
+- Homebrew: `brew install helgesverre/tap/dbdump` (macOS and Linux, Intel and ARM64).
+- Go 1.26+: `go install github.com/helgesverre/dbdump/cmd/dbdump@latest`
+- [Pre-built binaries](https://github.com/helgesverre/dbdump/releases): Versioned assets per platform (darwin/linux amd64/arm64, windows amd64).
+- Requirement: `mysqldump` must be in your PATH (`brew install mysql-client`, `apt-get install mysql-client`).
+
+## Commands
+
+- `dbdump dump`: Create a dump with smart exclusions. Interactive by default; add `--auto` for non-interactive smart defaults.
+- `dbdump list`: List all tables with their size and row count.
+- `dbdump config list`: Show saved connection profiles.
+- `dbdump config add <name>`: Save the current connection flags as a named profile (`~/.config/dbdump/profiles.yaml`, 0600).
+- `dbdump config remove <name>`: Delete a saved connection profile.
+
+## Flags
+
+- Connection: `-H/--host` (default 127.0.0.1), `-P/--port` (default 3306), `-u/--user`, `-p/--password`, `-d/--database`.
+- Password: prefer `DBDUMP_MYSQL_PWD` (or `MYSQL_PWD`) env var over `-p` so it never appears in the process list.
+- Profile: `--profile <name>` loads saved connection settings; explicit flags override profile values.
+- Output: `-o/--output` (default `{database}_{timestamp}.sql`).
+- Config: `-c/--config <file>` for a project YAML; merged with built-in defaults and `~/.dbdump.yaml`.
+- Exclusions: `--exclude <table>` (exact, repeatable), `--exclude-pattern <glob>` (repeatable, `*`/`?` globs).
+- Modes: `--auto` (smart defaults, no prompts), `--dry-run` (full plan: per-table size/rows, data vs structure-only, totals — nothing written).
+- Compression: `--compress auto|none|gzip|zstd` (streamed; `auto` infers from output filename).
+- SSH tunnel: `--ssh-host`, `--ssh-port` (default 22), `--ssh-user` (defaults to DB user), `--ssh-key`, `--ssh-local-port` (default auto). `-H/-P` describe the DB endpoint as seen from the SSH server.
+- TLS: `--tls-mode disabled|preferred|require|verify-ca|verify-identity`, `--tls-ca`, `--tls-cert`, `--tls-key`, `--tls-skip-verify`, `--tls-server-name`. Applies to both the connection and mysqldump. No `--tls-*` flag means unencrypted (unchanged default).
+
+## Configuration
+
+- Merge order (lowest to highest priority): built-in defaults, global `~/.dbdump.yaml`, project config via `--config`, then CLI flags. Config layers add exclusions; they never remove the built-in defaults.
+- Config YAML shape: `exclude.exact` (list of table names) and `exclude.patterns` (list of globs).
+- Built-in default exact excludes: activity_log, audits, sessions, cache, cache_locks, failed_jobs, telescope_entries, telescope_entries_tags, telescope_monitoring, pulse_entries, pulse_aggregates.
+- Built-in default pattern excludes: `telescope_*`, `pulse_*`, `*_cache`.
+
+## Examples
+
+- Interactive dump: `export DBDUMP_MYSQL_PWD=secret && dbdump dump -H localhost -u root -d mydb`
+- Auto with gzip: `dbdump dump -H localhost -u root -d mydb --auto --compress gzip`
+- Preview only: `dbdump dump -H localhost -u root -d mydb --dry-run`
+- Extra exclusions: `dbdump dump -H localhost -u root -d mydb --exclude audits --exclude-pattern "temp_*" --auto`
+- Schema only: `dbdump dump -H localhost -u root -d mydb --exclude-pattern "*"`
+- Over SSH bastion: `dbdump dump -H 127.0.0.1 -P 3306 -u root -d mydb --ssh-host bastion.example.com --ssh-user deploy --ssh-key ~/.ssh/id_ed25519 --auto`
+- Over TLS: `dbdump dump -H db.example.com -u root -d mydb --tls-mode verify-identity --tls-ca /etc/ssl/certs/ca.pem --auto`
+- Save/use a profile: `dbdump config add prod -H db.example.com -u readonly -d myapp` then `dbdump dump --profile prod --auto`
+- Restore: `mysql -u root -p mydb < dump.sql` (plain), `gzip -dc dump.sql.gz | mysql -u root -p mydb` (gzip), `zstd -dc dump.sql.zst | mysql -u root -p mydb` (zstd).

@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **[Connectivity]** Added TLS/SSL support via `--tls-mode` (disabled/preferred/require/verify-ca/verify-identity), `--tls-ca`, `--tls-cert`, `--tls-key`, `--tls-skip-verify`, and `--tls-server-name`. Applies to both dbdump's inspection connection and the `mysqldump` subprocess (with a MariaDB `--ssl` fallback), and the settings persist in connection profiles. With no `--tls-*` flag, behavior is unchanged.
 - **[Dump]** `--dry-run` now prints the full plan: each table's size and row count, whether its data will be dumped or only its structure preserved, totals, and the resolved output path/compression — instead of just the excluded-table list.
 - **[Profiles]** Implemented connection profiles end to end: `dbdump config add <name>` saves the current connection flags, `dbdump config remove <name>` deletes a profile, and `--profile <name>` loads a saved profile for `dump`/`list`. Explicit flags override profile values; the password falls back to `DBDUMP_MYSQL_PWD`/`MYSQL_PWD` when unset. The profiles file is written with 0600 permissions.
 
@@ -25,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **[Profiles]** Removed the unusable `password` field from connection profiles; profiles remain display-only (no `--profile` selection yet). Existing `profiles.yaml` files keep loading, with the key ignored.
 
 ### Removed
-- **[Docs]** Removed `SECURITY.md` and all references to it; trimmed the roadmap to the items actually under consideration (TLS/SSL, a parallel-dumping spike).
+- **[Docs]** Removed `SECURITY.md` and all references to it, and removed the stale, version-labelled "Future Roadmap" section.
 - **[Internal]** Removed dead code (unused inspector/connection/matcher helpers and the unreachable dry-run path) and de-duplicated the `mysqldump` compatibility-flag handling; no user-facing behavior change.
 
 ### Dependencies
@@ -314,14 +315,6 @@ dbdump is faster and more scriptable:
 - Configurable exclusions
 - Progress tracking
 - Dry-run mode for verification
-
-## Roadmap
-
-### Planned
-- Native TLS/SSL connection support
-
-### Under investigation
-- Parallel table dumping — being spiked to assess whether a consistent snapshot is achievable at a worthwhile speedup
 
 ## Support
 

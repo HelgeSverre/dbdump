@@ -110,7 +110,7 @@
             <h2>Installation</h2>
 
             <h3>Using Go</h3>
-            <p>If you have Go 1.24+ installed:</p>
+            <p>If you have Go 1.26+ installed:</p>
             <div class="code-block">
                 <pre><code>go install github.com/helgesverre/dbdump/cmd/dbdump@latest</code></pre>
                 <button class="copy-btn" data-copy="go install github.com/helgesverre/dbdump/cmd/dbdump@latest">Copy</button>
@@ -274,16 +274,37 @@ dbdump dump -H mysql80 -P 3306 -u root -d mydb \
   --ssh-user deploy \
   --auto
 
-# Dry run (preview what will be excluded)
+# Dump over TLS, verifying the server against a CA
+dbdump dump -H db.example.com -u root -d mydb \
+  --tls-mode verify-identity --tls-ca /etc/ssl/certs/ca.pem --auto
+
+# Dry run (preview the full plan: sizes, rows, data vs structure-only)
 dbdump dump -H localhost -u root -d mydb --dry-run</code></pre>
                     <button class="copy-btn" data-copy="dbdump dump -H localhost -u root -d mydb --auto">Copy</button>
                 </div>
 
                 <h4>list</h4>
-                <p>View all tables with their sizes before dumping.</p>
+                <p>List all tables with their size and row count before dumping.</p>
                 <div class="code-block">
                     <pre><code>dbdump list -H localhost -u root -d mydb</code></pre>
                     <button class="copy-btn" data-copy="dbdump list -H localhost -u root -d mydb">Copy</button>
+                </div>
+
+                <h4>config</h4>
+                <p>Save and reuse connection settings as named profiles (stored in <code>~/.config/dbdump/profiles.yaml</code> with 0600 permissions).</p>
+                <div class="code-block">
+                    <pre><code># Save the current connection flags as a profile
+dbdump config add prod -H db.example.com -u readonly -d myapp
+
+# List saved profiles
+dbdump config list
+
+# Use a profile (explicit flags still override)
+dbdump dump --profile prod --auto
+
+# Remove a profile
+dbdump config remove prod</code></pre>
+                    <button class="copy-btn" data-copy="dbdump config add prod -H db.example.com -u readonly -d myapp">Copy</button>
                 </div>
             </article>
 
@@ -300,9 +321,10 @@ dbdump dump -H localhost -u root -d mydb --dry-run</code></pre>
                         <tr><td><code>--user</code></td><td><code>-u</code></td><td>Database user</td><td>-</td></tr>
                         <tr><td><code>--password</code></td><td><code>-p</code></td><td>Database password</td><td>env var</td></tr>
                         <tr><td><code>--database</code></td><td><code>-d</code></td><td>Database name</td><td>-</td></tr>
+                        <tr><td><code>--profile</code></td><td>-</td><td>Load connection settings from a saved profile</td><td>-</td></tr>
                     </tbody>
                 </table>
-                <p class="note">Tip: Use <code>DBDUMP_MYSQL_PWD</code> environment variable instead of <code>-p</code> for security.</p>
+                <p class="note">Tip: Use the <code>DBDUMP_MYSQL_PWD</code> environment variable (or <code>MYSQL_PWD</code> as a fallback) instead of <code>-p</code> for security.</p>
             </article>
 
             <!-- Dump Options -->
@@ -318,13 +340,18 @@ dbdump dump -H localhost -u root -d mydb --dry-run</code></pre>
                         <tr><td><code>--exclude</code></td><td>Exclude specific table (can be used multiple times)</td></tr>
                         <tr><td><code>--exclude-pattern</code></td><td>Exclude tables matching pattern (can be used multiple times)</td></tr>
                         <tr><td><code>--auto</code></td><td>Use smart defaults without interaction</td></tr>
-                        <tr><td><code>--dry-run</code></td><td>Show what would be excluded without dumping</td></tr>
+                        <tr><td><code>--dry-run</code></td><td>Preview the full plan (per-table size and row count, data vs structure-only, totals, resolved output) without dumping</td></tr>
                         <tr><td><code>--compress</code></td><td>Compression format: <code>auto</code>, <code>none</code>, <code>gzip</code>, or <code>zstd</code></td></tr>
                         <tr><td><code>--ssh-host</code></td><td>SSH bastion host for built-in tunneling</td></tr>
                         <tr><td><code>--ssh-port</code></td><td>SSH bastion port (default: <code>22</code>)</td></tr>
                         <tr><td><code>--ssh-user</code></td><td>SSH username (defaults to the database user)</td></tr>
                         <tr><td><code>--ssh-key</code></td><td>SSH private key path</td></tr>
                         <tr><td><code>--ssh-local-port</code></td><td>Local tunnel port (default: auto-selected)</td></tr>
+                        <tr><td><code>--tls-mode</code></td><td>TLS mode: <code>disabled</code>, <code>preferred</code>, <code>require</code>, <code>verify-ca</code>, <code>verify-identity</code></td></tr>
+                        <tr><td><code>--tls-ca</code></td><td>CA certificate (PEM) used to verify the server</td></tr>
+                        <tr><td><code>--tls-cert</code>, <code>--tls-key</code></td><td>Client certificate and key (PEM) for mutual TLS</td></tr>
+                        <tr><td><code>--tls-skip-verify</code></td><td>Encrypt but skip certificate verification (insecure)</td></tr>
+                        <tr><td><code>--tls-server-name</code></td><td>Override the hostname verified against the certificate</td></tr>
                     </tbody>
                 </table>
             </article>

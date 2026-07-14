@@ -287,6 +287,20 @@ dbdump dump [flags]
 | `--user` | `-u` | Database user | - | Yes |
 | `--password` | `-p` | Database password | $DBDUMP_MYSQL_PWD or $MYSQL_PWD | No |
 | `--database` | `-d` | Database name | - | Yes |
+| `--profile` | - | Load connection settings from a saved profile | - | No |
+
+**TLS/SSL Flags:**
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--tls-mode` | `disabled`, `preferred`, `require`, `verify-ca`, or `verify-identity` | - (no TLS) |
+| `--tls-ca` | CA certificate (PEM) used to verify the server | - |
+| `--tls-cert` | Client certificate (PEM) for mutual TLS | - |
+| `--tls-key` | Client private key (PEM) for mutual TLS | - |
+| `--tls-skip-verify` | Encrypt but skip certificate verification (insecure) | false |
+| `--tls-server-name` | Override the hostname verified against the certificate | - |
+
+TLS applies to both the inspection connection and the `mysqldump` subprocess. Modes mirror MySQL's `ssl-mode`. Behind an SSH tunnel the host becomes `127.0.0.1`, so use `--tls-server-name` to pin the real certificate name. With no `--tls-*` flag, connections are unencrypted as before.
 
 **Dump Flags:**
 
