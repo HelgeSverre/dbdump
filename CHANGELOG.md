@@ -24,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **[Inspect]** `formatBytes` now reports petabyte-scale sizes correctly (previously 1024× too small).
 
 ### Changed
-- **[Profiles]** Removed the unusable `password` field from connection profiles; profiles remain display-only (no `--profile` selection yet). Existing `profiles.yaml` files keep loading, with the key ignored.
+- **[Dev]** Consolidated Docker test infrastructure under `docker/` and added a re-runnable smoke test (`docker/smoke-test.sh`, `just smoke`) covering connection profiles across MySQL 5.7/8.0/8.4 + MariaDB and every TLS mode. `just install` now installs to `~/.local/bin` without sudo.
 
 ### Removed
 - **[Docs]** Removed `SECURITY.md` and all references to it, and removed the stale, version-labelled "Future Roadmap" section.

@@ -15,7 +15,7 @@ This directory contains testing tools and scripts for dbdump.
 
 ### Docker Compose Setup
 
-The `docker-compose.yml` provides isolated test databases:
+The `docker/docker-compose.yml` file provides isolated test databases:
 
 | Database | Version | Port | Container Name |
 |----------|---------|------|----------------|
@@ -33,19 +33,19 @@ The `docker-compose.yml` provides isolated test databases:
 
 ```bash
 # Start all databases
-docker compose up -d
+docker compose -f docker/docker-compose.yml up -d
 
 # Start specific database
-docker compose up -d mysql80
+docker compose -f docker/docker-compose.yml up -d mysql80
 
 # View logs
-docker compose logs -f mysql80
+docker compose -f docker/docker-compose.yml logs -f mysql80
 
 # Stop all
-docker compose down
+docker compose -f docker/docker-compose.yml down
 
 # Stop and remove volumes (clean slate)
-docker compose down -v
+docker compose -f docker/docker-compose.yml down -v
 ```
 
 ---
@@ -178,7 +178,7 @@ Tests Failed: 0
 
 ```bash
 # Start database
-docker-compose up -d mysql80
+docker compose -f docker/docker-compose.yml up -d mysql80
 
 # Generate test data
 ./test/generate-sample-data.sh small 127.0.0.1 3308 testdb
@@ -294,14 +294,14 @@ just bench testdb 5
 
 ```bash
 # Check logs
-docker compose logs mysql80
+docker compose -f docker/docker-compose.yml logs mysql80
 
 # Restart specific container
-docker compose restart mysql80
+docker compose -f docker/docker-compose.yml restart mysql80
 
 # Clean start
-docker compose down -v
-docker compose up -d
+docker compose -f docker/docker-compose.yml down -v
+docker compose -f docker/docker-compose.yml up -d
 ```
 
 ### Connection Refused
@@ -347,10 +347,10 @@ bash -x ./test/integration-test.sh
 
 ```bash
 # Stop containers
-docker compose down
+docker compose -f docker/docker-compose.yml down
 
 # Remove volumes (deletes all data)
-docker compose down -v
+docker compose -f docker/docker-compose.yml down -v
 
 # Remove test dump files
 rm -f *.sql test_*.sql /tmp/test_*.sql
@@ -383,7 +383,7 @@ jobs:
         run: go build -o bin/dbdump ./cmd/dbdump
       
       - name: Start test databases
-        run: docker compose up -d
+        run: docker compose -f docker/docker-compose.yml up -d
 
       - name: Wait for databases
         run: sleep 30
@@ -396,7 +396,7 @@ jobs:
 
       - name: Cleanup
         if: always()
-        run: docker compose down -v
+        run: docker compose -f docker/docker-compose.yml down -v
 ```
 
 ---

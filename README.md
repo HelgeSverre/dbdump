@@ -439,7 +439,7 @@ just fmt
 ./test/integration-test.sh
 
 # Cleanup
-docker compose down -v
+docker compose -f docker/docker-compose.yml down -v
 ```
 
 See [test/README.md](test/README.md) for detailed testing documentation.
