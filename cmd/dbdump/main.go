@@ -60,6 +60,7 @@ type connectionFlags struct {
 	Database string
 	Profile  string
 	SSH      sshFlags
+	TLS      database.TLSConfig
 }
 
 type sshFlags struct {
@@ -109,6 +110,13 @@ dumps faster and more manageable for development environments.`,
 	rootCmd.PersistentFlags().StringVar(&conn.SSH.User, "ssh-user", "", "SSH username (defaults to database user)")
 	rootCmd.PersistentFlags().StringVar(&conn.SSH.KeyFile, "ssh-key", "", "SSH private key path")
 	rootCmd.PersistentFlags().IntVar(&conn.SSH.LocalPort, "ssh-local-port", 0, "Local port for the SSH tunnel (0 picks a free port)")
+
+	rootCmd.PersistentFlags().StringVar(&conn.TLS.Mode, "tls-mode", "", "TLS mode: disabled, preferred, require, verify-ca, verify-identity")
+	rootCmd.PersistentFlags().StringVar(&conn.TLS.CAFile, "tls-ca", "", "Path to the TLS CA certificate (PEM) used to verify the server")
+	rootCmd.PersistentFlags().StringVar(&conn.TLS.CertFile, "tls-cert", "", "Path to the client certificate (PEM) for mutual TLS")
+	rootCmd.PersistentFlags().StringVar(&conn.TLS.KeyFile, "tls-key", "", "Path to the client private key (PEM) for mutual TLS")
+	rootCmd.PersistentFlags().BoolVar(&conn.TLS.SkipVerify, "tls-skip-verify", false, "Encrypt but skip server certificate verification (insecure)")
+	rootCmd.PersistentFlags().StringVar(&conn.TLS.ServerName, "tls-server-name", "", "Override the hostname verified against the server certificate (useful behind an SSH tunnel)")
 
 	rootCmd.AddCommand(newDumpCmd(conn))
 	rootCmd.AddCommand(newListCmd(conn))
@@ -361,12 +369,18 @@ func runConfigAdd(name string, connFlags connectionFlags) error {
 	}
 
 	profiles.Upsert(config.ConnectionProfile{
-		Name:     name,
-		Host:     connFlags.Host,
-		Port:     connFlags.Port,
-		User:     connFlags.User,
-		Password: connFlags.Password,
-		Database: connFlags.Database,
+		Name:          name,
+		Host:          connFlags.Host,
+		Port:          connFlags.Port,
+		User:          connFlags.User,
+		Password:      connFlags.Password,
+		Database:      connFlags.Database,
+		TLSMode:       connFlags.TLS.Mode,
+		TLSCAFile:     connFlags.TLS.CAFile,
+		TLSCertFile:   connFlags.TLS.CertFile,
+		TLSKeyFile:    connFlags.TLS.KeyFile,
+		TLSSkipVerify: connFlags.TLS.SkipVerify,
+		TLSServerName: connFlags.TLS.ServerName,
 	})
 
 	if err := config.SaveProfiles(profiles); err != nil {
@@ -430,6 +444,24 @@ func applyProfileFlags(conn connectionFlags, changed func(string) bool) (connect
 	if profile.Database != "" && !changed("database") {
 		conn.Database = profile.Database
 	}
+	if profile.TLSMode != "" && !changed("tls-mode") {
+		conn.TLS.Mode = profile.TLSMode
+	}
+	if profile.TLSCAFile != "" && !changed("tls-ca") {
+		conn.TLS.CAFile = profile.TLSCAFile
+	}
+	if profile.TLSCertFile != "" && !changed("tls-cert") {
+		conn.TLS.CertFile = profile.TLSCertFile
+	}
+	if profile.TLSKeyFile != "" && !changed("tls-key") {
+		conn.TLS.KeyFile = profile.TLSKeyFile
+	}
+	if profile.TLSSkipVerify && !changed("tls-skip-verify") {
+		conn.TLS.SkipVerify = true
+	}
+	if profile.TLSServerName != "" && !changed("tls-server-name") {
+		conn.TLS.ServerName = profile.TLSServerName
+	}
 
 	return conn, nil
 }
@@ -454,6 +486,9 @@ func (c connectionFlags) validate() error {
 	if c.Database == "" {
 		return errors.New("database name is required (use -d or --database)")
 	}
+	if err := c.TLS.Validate(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -476,6 +511,7 @@ func (c connectionFlags) toConnection() *database.Connection {
 		Password: c.Password,
 		Database: c.Database,
 		SSH:      sshConfig,
+		TLS:      c.TLS,
 	}
 }
 

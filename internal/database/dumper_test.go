@@ -335,6 +335,45 @@ func TestDumpUsesSingleSignalContextAcrossDump(t *testing.T) {
 	}
 }
 
+func TestDumpPassesTLSArgsToMySQLDump(t *testing.T) {
+	resetMySQLDumpFeatures()
+	oldExecCommand := execCommand
+	oldExecCommandContext := execCommandContext
+	t.Cleanup(func() {
+		execCommand = oldExecCommand
+		execCommandContext = oldExecCommandContext
+		resetMySQLDumpFeatures()
+	})
+
+	// mysqldump --help advertises ssl-mode, so the modern flag path is taken.
+	execCommand = func(name string, args ...string) *exec.Cmd {
+		return exec.Command("sh", "-c", "printf '%s\\n' '--ssl-mode' '--column-statistics'")
+	}
+	sslPasses := 0
+	execCommandContext = func(ctx context.Context, name string, args ...string) *exec.Cmd {
+		if containsArg(args, "--ssl-mode=REQUIRED") {
+			sslPasses++
+		}
+		return exec.CommandContext(ctx, "sh", "-c", "printf ''")
+	}
+
+	outputFile := filepath.Join(t.TempDir(), "dump.sql")
+	dumper := NewDumper(&DumpOptions{
+		Connection: &Connection{
+			Host: "127.0.0.1", Port: 3306, User: "root", Database: "testdb",
+			TLS: TLSConfig{Mode: TLSRequire},
+		},
+		OutputFile: outputFile,
+	})
+
+	if _, err := dumper.Dump(); err != nil {
+		t.Fatalf("Dump returned error: %v", err)
+	}
+	if sslPasses != 2 {
+		t.Fatalf("expected --ssl-mode=REQUIRED in both mysqldump passes, saw %d", sslPasses)
+	}
+}
+
 func TestGetMySQLDumpFeaturesReturnsHelpError(t *testing.T) {
 	t.Helper()
 

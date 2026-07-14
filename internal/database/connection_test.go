@@ -16,7 +16,10 @@ func TestConnectionDSNIncludesConfiguredTimeouts(t *testing.T) {
 		Database: "testdb",
 	}
 
-	dsn := connection.DSN()
+	dsn, err := connection.DSN()
+	if err != nil {
+		t.Fatalf("DSN returned error: %v", err)
+	}
 
 	for _, want := range []string{
 		"timeout=5s",
@@ -27,5 +30,26 @@ func TestConnectionDSNIncludesConfiguredTimeouts(t *testing.T) {
 		if !strings.Contains(dsn, want) {
 			t.Fatalf("expected DSN %q to contain %q", dsn, want)
 		}
+	}
+
+	if strings.Contains(dsn, "tls=") {
+		t.Fatalf("expected no tls parameter when TLS is unconfigured, got %q", dsn)
+	}
+}
+
+func TestConnectionDSNAddsTLSParam(t *testing.T) {
+	t.Parallel()
+
+	connection := &Connection{
+		Host: "db.example.com", Port: 3306, User: "app", Database: "testdb",
+		TLS: TLSConfig{Mode: TLSRequire},
+	}
+
+	dsn, err := connection.DSN()
+	if err != nil {
+		t.Fatalf("DSN returned error: %v", err)
+	}
+	if !strings.Contains(dsn, "tls=skip-verify") {
+		t.Fatalf("expected require mode to map to tls=skip-verify, got %q", dsn)
 	}
 }

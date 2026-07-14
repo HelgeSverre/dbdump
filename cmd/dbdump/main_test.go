@@ -287,6 +287,24 @@ func TestApplyProfileFlagsUnknownProfileErrors(t *testing.T) {
 	}
 }
 
+func TestToConnectionCopiesTLS(t *testing.T) {
+	conn := connectionFlags{
+		User: "root", Database: "db",
+		TLS: database.TLSConfig{Mode: database.TLSRequire, SkipVerify: true, ServerName: "db.internal"},
+	}
+	got := conn.toConnection()
+	if got.TLS.Mode != database.TLSRequire || !got.TLS.SkipVerify || got.TLS.ServerName != "db.internal" {
+		t.Fatalf("expected TLS settings copied into connection, got %+v", got.TLS)
+	}
+}
+
+func TestValidateRejectsUnpairedTLSCert(t *testing.T) {
+	err := connectionFlags{User: "root", Database: "db", TLS: database.TLSConfig{CertFile: "/c.pem"}}.validate()
+	if err == nil || !strings.Contains(err.Error(), "--tls-cert and --tls-key") {
+		t.Fatalf("expected cert/key pairing error, got %v", err)
+	}
+}
+
 func TestApplyProfileFlagsWithoutProfileIsNoop(t *testing.T) {
 	conn := connectionFlags{Host: "127.0.0.1", User: "root", Database: "testdb"}
 	got, err := applyProfileFlags(conn, func(string) bool { return false })

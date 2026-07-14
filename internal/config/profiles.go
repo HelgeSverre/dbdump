@@ -13,12 +13,18 @@ import (
 // profiles file; that file is written with 0600 permissions, but treat it like any
 // other credential store and keep it off shared machines.
 type ConnectionProfile struct {
-	Name     string `yaml:"name"`
-	Host     string `yaml:"host"`
-	Port     int    `yaml:"port"`
-	User     string `yaml:"user"`
-	Password string `yaml:"password,omitempty"`
-	Database string `yaml:"database,omitempty"`
+	Name          string `yaml:"name"`
+	Host          string `yaml:"host"`
+	Port          int    `yaml:"port"`
+	User          string `yaml:"user"`
+	Password      string `yaml:"password,omitempty"`
+	Database      string `yaml:"database,omitempty"`
+	TLSMode       string `yaml:"tls_mode,omitempty"`
+	TLSCAFile     string `yaml:"tls_ca,omitempty"`
+	TLSCertFile   string `yaml:"tls_cert,omitempty"`
+	TLSKeyFile    string `yaml:"tls_key,omitempty"`
+	TLSSkipVerify bool   `yaml:"tls_skip_verify,omitempty"`
+	TLSServerName string `yaml:"tls_server_name,omitempty"`
 }
 
 // ProfilesConfig represents the profiles configuration file

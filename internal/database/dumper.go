@@ -30,6 +30,7 @@ var (
 type mysqlDumpFeatureSet struct {
 	ColumnStatistics bool
 	SetGTIDPurged    bool
+	SSLMode          bool
 }
 
 var (
@@ -291,7 +292,7 @@ func (d *Dumper) dumpStructure(ctx context.Context, writer io.Writer, defaultsFi
 		"--events",
 	)
 
-	args, err := appendMySQLDumpFeatureArgs(args)
+	args, err := appendMySQLDumpFeatureArgs(args, d.options.Connection.TLS)
 	if err != nil {
 		return err
 	}
@@ -319,7 +320,7 @@ func (d *Dumper) dumpData(ctx context.Context, writer io.Writer, defaultsFile st
 		"--skip-events",
 	)
 
-	args, err := appendMySQLDumpFeatureArgs(args)
+	args, err := appendMySQLDumpFeatureArgs(args, d.options.Connection.TLS)
 	if err != nil {
 		return err
 	}
@@ -342,9 +343,10 @@ func (d *Dumper) dumpData(ctx context.Context, writer io.Writer, defaultsFile st
 	return nil
 }
 
-// appendMySQLDumpFeatureArgs appends version-dependent compatibility flags shared
-// by the structure and data passes, so a new flag only has to be added once.
-func appendMySQLDumpFeatureArgs(args []string) ([]string, error) {
+// appendMySQLDumpFeatureArgs appends version-dependent compatibility flags and the
+// TLS flags shared by the structure and data passes, so each only has to be added
+// once. TLS flags are gated on mysqldump's --ssl-mode support (MariaDB fallback).
+func appendMySQLDumpFeatureArgs(args []string, tlsCfg TLSConfig) ([]string, error) {
 	features, err := getMySQLDumpFeatures()
 	if err != nil {
 		return nil, err
@@ -355,6 +357,13 @@ func appendMySQLDumpFeatureArgs(args []string) ([]string, error) {
 	if features.ColumnStatistics {
 		args = append(args, "--column-statistics=0")
 	}
+
+	tlsArgs, err := mysqlDumpTLSArgs(tlsCfg, features.SSLMode)
+	if err != nil {
+		return nil, err
+	}
+	args = append(args, tlsArgs...)
+
 	return args, nil
 }
 
@@ -445,6 +454,7 @@ func getMySQLDumpFeatures() (mysqlDumpFeatureSet, error) {
 		mysqlDumpFeatures = mysqlDumpFeatureSet{
 			ColumnStatistics: strings.Contains(help, "column-statistics"),
 			SetGTIDPurged:    strings.Contains(help, "set-gtid-purged"),
+			SSLMode:          strings.Contains(help, "ssl-mode"),
 		}
 	})
 

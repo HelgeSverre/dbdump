@@ -14,6 +14,7 @@ func TestSaveProfilesRoundTripsAndEnforces0600(t *testing.T) {
 	profiles.Upsert(ConnectionProfile{
 		Name: "prod", Host: "db.example.com", Port: 3306,
 		User: "readonly", Password: "s3cret", Database: "mydb",
+		TLSMode: "verify-identity", TLSCAFile: "/etc/ssl/ca.pem",
 	})
 
 	if err := SaveProfiles(profiles); err != nil {
@@ -42,6 +43,9 @@ func TestSaveProfilesRoundTripsAndEnforces0600(t *testing.T) {
 	}
 	if got.Password != "s3cret" || got.Host != "db.example.com" || got.Database != "mydb" {
 		t.Fatalf("unexpected reloaded profile: %#v", got)
+	}
+	if got.TLSMode != "verify-identity" || got.TLSCAFile != "/etc/ssl/ca.pem" {
+		t.Fatalf("expected TLS settings to round-trip, got %#v", got)
 	}
 }
 
