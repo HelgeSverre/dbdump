@@ -137,15 +137,14 @@ func formatBytes(bytes int64) string {
 		return fmt.Sprintf("%d B", bytes)
 	}
 
+	sizes := []string{"KB", "MB", "GB", "TB"}
+	// Stop scaling once we reach the largest known unit so the divisor stays in
+	// step with the unit label; otherwise petabyte-scale inputs report a value
+	// 1024x too small (e.g. 1 PB shown as "1.0 TB").
 	div, exp := int64(unit), 0
-	for n := bytes / unit; n >= unit; n /= unit {
+	for n := bytes / unit; n >= unit && exp < len(sizes)-1; n /= unit {
 		div *= unit
 		exp++
-	}
-
-	sizes := []string{"KB", "MB", "GB", "TB"}
-	if exp >= len(sizes) {
-		exp = len(sizes) - 1
 	}
 
 	return fmt.Sprintf("%.1f %s", float64(bytes)/float64(div), sizes[exp])
