@@ -6,6 +6,24 @@ import (
 	"testing"
 )
 
+func TestLoadProfilesRejectsUnknownKeys(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	configDir := filepath.Join(home, ".config", "dbdump")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatalf("MkdirAll returned error: %v", err)
+	}
+	path := filepath.Join(configDir, "profiles.yaml")
+	if err := os.WriteFile(path, []byte("profile:\n  - name: prod\n"), 0600); err != nil {
+		t.Fatalf("WriteFile returned error: %v", err)
+	}
+
+	if _, err := LoadProfiles(); err == nil {
+		t.Fatal("expected unknown YAML key to be rejected")
+	}
+}
+
 func TestLoadProfilesDoesNotCreateConfigDirectory(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)

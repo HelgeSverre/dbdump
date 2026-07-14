@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-
-	"gopkg.in/yaml.v3"
 )
 
 // ConnectionProfile represents a saved database connection
@@ -52,7 +50,7 @@ func LoadProfiles() (*ProfilesConfig, error) {
 	}
 
 	var config ProfilesConfig
-	if err := yaml.Unmarshal(data, &config); err != nil {
+	if err := strictUnmarshal(data, &config); err != nil {
 		return nil, fmt.Errorf("failed to parse profiles: %w", err)
 	}
 
