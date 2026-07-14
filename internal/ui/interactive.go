@@ -20,6 +20,7 @@ type TableSelectionModel struct {
 	cursor    int
 	done      bool
 	cancelled bool
+	confirmed bool
 }
 
 // NewTableSelectionModel creates a new table selection model
@@ -54,6 +55,7 @@ func (m TableSelectionModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "enter":
 			m.done = true
+			m.confirmed = true
 			return m, tea.Quit
 
 		case "up", "k":
@@ -138,14 +140,28 @@ func RunInteractiveSelection(tables []database.TableInfo, preSelected []string) 
 
 	model := NewTableSelectionModel(tables, preSelected)
 
-	p := tea.NewProgram(model)
-	finalModel, err := p.Run()
-	if err != nil {
-		return nil, fmt.Errorf("failed to run interactive selection: %w", err)
+	finalModel, err := tea.NewProgram(model).Run()
+	return selectionResult(finalModel, err)
+}
+
+// selectionResult interprets the outcome of the interactive program. A selection
+// is honoured only when the user explicitly confirmed it with Enter; every other
+// exit path — a typed Ctrl+C/q, an external SIGINT (ErrInterrupted), a kill
+// (ErrProgramKilled), or a SIGTERM that bubbletea turns into a silent quit — is
+// treated as a cancellation so the caller never proceeds with an unintended dump.
+func selectionResult(finalModel tea.Model, runErr error) ([]string, error) {
+	if runErr != nil {
+		if errors.Is(runErr, tea.ErrInterrupted) || errors.Is(runErr, tea.ErrProgramKilled) {
+			return nil, ErrSelectionCancelled
+		}
+		return nil, fmt.Errorf("failed to run interactive selection: %w", runErr)
 	}
 
-	m := finalModel.(TableSelectionModel)
-	if m.cancelled {
+	m, ok := finalModel.(TableSelectionModel)
+	if !ok {
+		return nil, fmt.Errorf("unexpected selection model type %T", finalModel)
+	}
+	if !m.confirmed {
 		return nil, ErrSelectionCancelled
 	}
 	return m.GetSelected(), nil
