@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/helgesverre/dbdump/internal/config"
 	"github.com/helgesverre/dbdump/internal/database"
 	"github.com/helgesverre/dbdump/internal/ui"
 )
@@ -250,6 +251,114 @@ func TestResolveOutputPathUsesCompressionExtension(t *testing.T) {
 
 	if filepath.Base(got) != "testdb_20260102_030405.sql.gz" {
 		t.Fatalf("unexpected compressed default output path: %s", got)
+	}
+}
+
+func TestApplyProfileFlagsFillsOnlyUnsetFields(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	writeProfiles(t, "profiles:\n  - name: prod\n    host: db.example.com\n    port: 4406\n    user: readonly\n    password: s3cret\n    database: mydb\n")
+
+	// host was set explicitly on the command line, everything else comes from the profile.
+	changed := func(flag string) bool { return flag == "host" }
+	conn := connectionFlags{Profile: "prod", Host: "cli-host"}
+
+	merged, err := applyProfileFlags(conn, changed)
+	if err != nil {
+		t.Fatalf("applyProfileFlags returned error: %v", err)
+	}
+
+	if merged.Host != "cli-host" {
+		t.Fatalf("expected explicit host to be kept, got %q", merged.Host)
+	}
+	if merged.Port != 4406 || merged.User != "readonly" || merged.Password != "s3cret" || merged.Database != "mydb" {
+		t.Fatalf("expected unset fields to come from profile, got %#v", merged)
+	}
+}
+
+func TestApplyProfileFlagsUnknownProfileErrors(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	_, err := applyProfileFlags(connectionFlags{Profile: "nope"}, func(string) bool { return false })
+	if err == nil || !strings.Contains(err.Error(), "not found") {
+		t.Fatalf("expected profile-not-found error, got %v", err)
+	}
+}
+
+func TestApplyProfileFlagsWithoutProfileIsNoop(t *testing.T) {
+	conn := connectionFlags{Host: "127.0.0.1", User: "root", Database: "testdb"}
+	got, err := applyProfileFlags(conn, func(string) bool { return false })
+	if err != nil {
+		t.Fatalf("applyProfileFlags returned error: %v", err)
+	}
+	if got != conn {
+		t.Fatalf("expected connection flags unchanged, got %#v", got)
+	}
+}
+
+func TestRunConfigAddSavesProfile(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	stubPrintSuccess(t, func(string) {})
+
+	err := runConfigAdd("prod", connectionFlags{
+		Host: "db.example.com", Port: 3306, User: "readonly", Password: "s3cret", Database: "mydb",
+	})
+	if err != nil {
+		t.Fatalf("runConfigAdd returned error: %v", err)
+	}
+
+	profiles, err := config.LoadProfiles()
+	if err != nil {
+		t.Fatalf("LoadProfiles returned error: %v", err)
+	}
+	got, ok := profiles.Find("prod")
+	if !ok {
+		t.Fatal("expected profile to be saved")
+	}
+	if got.Password != "s3cret" || got.Database != "mydb" {
+		t.Fatalf("unexpected saved profile: %#v", got)
+	}
+}
+
+func TestRunConfigRemoveDeletesProfile(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	stubPrintSuccess(t, func(string) {})
+
+	if err := runConfigAdd("prod", connectionFlags{User: "root", Database: "mydb"}); err != nil {
+		t.Fatalf("runConfigAdd returned error: %v", err)
+	}
+	if err := runConfigRemove("prod"); err != nil {
+		t.Fatalf("runConfigRemove returned error: %v", err)
+	}
+
+	profiles, err := config.LoadProfiles()
+	if err != nil {
+		t.Fatalf("LoadProfiles returned error: %v", err)
+	}
+	if _, ok := profiles.Find("prod"); ok {
+		t.Fatal("expected profile to be removed")
+	}
+
+	if err := runConfigRemove("prod"); err == nil || !strings.Contains(err.Error(), "not found") {
+		t.Fatalf("expected not-found error removing a missing profile, got %v", err)
+	}
+}
+
+func writeProfiles(t *testing.T, contents string) {
+	t.Helper()
+	path, err := config.GetProfilesPath()
+	if err != nil {
+		t.Fatalf("GetProfilesPath returned error: %v", err)
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+		t.Fatalf("MkdirAll returned error: %v", err)
+	}
+	if err := os.WriteFile(path, []byte(contents), 0600); err != nil {
+		t.Fatalf("WriteFile returned error: %v", err)
 	}
 }
 

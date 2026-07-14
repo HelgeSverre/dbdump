@@ -382,9 +382,39 @@ Saved connection profiles:
     Host: staging.example.com:3306
     User: stageuser
     Database: stagedb
+    Password: (saved)
 ```
 
-The CLI currently exposes `config list` only. Profile creation and profile-based dumping are not implemented yet.
+### config add Command
+
+Save the current connection flags as a named profile:
+
+```bash
+dbdump config add production -H db.example.com -P 3306 -u produser -p secret -d maindb
+```
+
+The profiles file (`~/.config/dbdump/profiles.yaml`) is written with `0600`
+permissions. A stored password is optional; omit `-p` to resolve it from
+`DBDUMP_MYSQL_PWD`/`MYSQL_PWD` at dump time instead.
+
+### config remove Command
+
+Delete a saved profile:
+
+```bash
+dbdump config remove production
+```
+
+### Using a profile
+
+Pass `--profile <name>` to `dump` or `list` to load a saved profile. Any explicit
+connection flag overrides the corresponding profile value:
+
+```bash
+dbdump dump --profile production --auto
+dbdump list --profile staging
+dbdump dump --profile production -d otherdb   # override just the database
+```
 
 ---
 
@@ -518,7 +548,12 @@ When you run `dbdump dump` without the `--auto` flag, you'll enter interactive m
 ## Connection Profiles
 
 `dbdump config list` reads saved profiles from `~/.config/dbdump/profiles.yaml`.
-Profile creation and profile-based dumping are not exposed by the CLI yet.
+Create profiles with `dbdump config add <name>` (saving the current connection
+flags), delete them with `dbdump config remove <name>`, and select one for a dump
+or listing with `--profile <name>`. Explicit connection flags override profile
+values, and the password falls back to `DBDUMP_MYSQL_PWD`/`MYSQL_PWD` when neither
+a flag nor the profile provides one. The profiles file is written with `0600`
+permissions.
 
 ---
 

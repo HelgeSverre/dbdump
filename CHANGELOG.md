@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **[Profiles]** Implemented connection profiles end to end: `dbdump config add <name>` saves the current connection flags, `dbdump config remove <name>` deletes a profile, and `--profile <name>` loads a saved profile for `dump`/`list`. Explicit flags override profile values; the password falls back to `DBDUMP_MYSQL_PWD`/`MYSQL_PWD` when unset. The profiles file is written with 0600 permissions.
+
 ### Fixed
 - **[Connectivity]** Fixed an indefinite hang when the SSH tunnel process exited before becoming ready (bad key, DNS failure, `ExitOnForwardFailure`): tunnel shutdown no longer deadlocks and the underlying error is surfaced. Also fixed a data race on the ssh stderr buffer.
 - **[CLI]** An external `SIGTERM`/`SIGINT` (or kill) during interactive table selection now cancels the dump instead of proceeding with a full one; a selection is honored only when explicitly confirmed with Enter.

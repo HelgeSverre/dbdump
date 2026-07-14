@@ -57,6 +57,7 @@ type connectionFlags struct {
 	User     string
 	Password string
 	Database string
+	Profile  string
 	SSH      sshFlags
 }
 
@@ -101,6 +102,7 @@ dumps faster and more manageable for development environments.`,
 	rootCmd.PersistentFlags().StringVarP(&conn.User, "user", "u", "", "Database user")
 	rootCmd.PersistentFlags().StringVarP(&conn.Password, "password", "p", "", "Database password (or use DBDUMP_MYSQL_PWD/MYSQL_PWD env)")
 	rootCmd.PersistentFlags().StringVarP(&conn.Database, "database", "d", "", "Database name")
+	rootCmd.PersistentFlags().StringVar(&conn.Profile, "profile", "", "Load connection settings from a saved profile (see 'dbdump config')")
 	rootCmd.PersistentFlags().StringVar(&conn.SSH.Host, "ssh-host", "", "SSH bastion host for tunneling to the database")
 	rootCmd.PersistentFlags().IntVar(&conn.SSH.Port, "ssh-port", 22, "SSH bastion port")
 	rootCmd.PersistentFlags().StringVar(&conn.SSH.User, "ssh-user", "", "SSH username (defaults to database user)")
@@ -109,7 +111,7 @@ dumps faster and more manageable for development environments.`,
 
 	rootCmd.AddCommand(newDumpCmd(conn))
 	rootCmd.AddCommand(newListCmd(conn))
-	rootCmd.AddCommand(newConfigCmd())
+	rootCmd.AddCommand(newConfigCmd(conn))
 
 	return rootCmd
 }
@@ -123,7 +125,11 @@ func newDumpCmd(conn *connectionFlags) *cobra.Command {
 		Long: `Dump a MySQL database, excluding data from noisy tables (like audit logs,
 sessions, cache) while preserving their structure.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runDump(*conn, *opts)
+			connFlags, err := applyProfileFlags(*conn, cmd.Flags().Changed)
+			if err != nil {
+				return err
+			}
+			return runDump(connFlags, *opts)
 		},
 	}
 
@@ -144,22 +150,47 @@ func newListCmd(conn *connectionFlags) *cobra.Command {
 		Short: "List all tables in the database",
 		Long:  `List all tables in the database with their sizes and row counts.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runList(*conn)
+			connFlags, err := applyProfileFlags(*conn, cmd.Flags().Changed)
+			if err != nil {
+				return err
+			}
+			return runList(connFlags)
 		},
 	}
 }
 
-func newConfigCmd() *cobra.Command {
+func newConfigCmd(conn *connectionFlags) *cobra.Command {
 	configCmd := &cobra.Command{
 		Use:   "config",
-		Short: "Inspect dbdump configuration",
-		Long:  `Inspect dbdump configuration and saved connection profiles.`,
+		Short: "Inspect and manage dbdump configuration",
+		Long:  `Inspect and manage dbdump configuration and saved connection profiles.`,
 	}
 
 	configCmd.AddCommand(&cobra.Command{
 		Use:   "list",
 		Short: "List saved connection profiles",
 		RunE:  runConfigList,
+	})
+
+	configCmd.AddCommand(&cobra.Command{
+		Use:   "add <name>",
+		Short: "Save the current connection flags as a named profile",
+		Long: `Save the current connection flags (--host/--port/--user/--password/--database)
+as a named profile. The profiles file is written with 0600 permissions; treat it
+like any other credential store.`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runConfigAdd(args[0], *conn)
+		},
+	})
+
+	configCmd.AddCommand(&cobra.Command{
+		Use:   "remove <name>",
+		Short: "Delete a saved connection profile",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runConfigRemove(args[0])
+		},
 	})
 
 	return configCmd
@@ -318,10 +349,93 @@ func runConfigList(cmd *cobra.Command, args []string) error {
 		if profile.Database != "" {
 			fmt.Printf("    Database: %s\n", profile.Database)
 		}
+		if profile.Password != "" {
+			fmt.Println("    Password: (saved)")
+		}
 		fmt.Println()
 	}
 
 	return nil
+}
+
+func runConfigAdd(name string, connFlags connectionFlags) error {
+	profiles, err := config.LoadProfiles()
+	if err != nil {
+		return fmt.Errorf("failed to load profiles: %w", err)
+	}
+
+	profiles.Upsert(config.ConnectionProfile{
+		Name:     name,
+		Host:     connFlags.Host,
+		Port:     connFlags.Port,
+		User:     connFlags.User,
+		Password: connFlags.Password,
+		Database: connFlags.Database,
+	})
+
+	if err := config.SaveProfiles(profiles); err != nil {
+		return fmt.Errorf("failed to save profile: %w", err)
+	}
+
+	printSuccess(fmt.Sprintf("Saved connection profile %q", name))
+	return nil
+}
+
+func runConfigRemove(name string) error {
+	profiles, err := config.LoadProfiles()
+	if err != nil {
+		return fmt.Errorf("failed to load profiles: %w", err)
+	}
+
+	if !profiles.Remove(name) {
+		return fmt.Errorf("connection profile %q not found", name)
+	}
+
+	if err := config.SaveProfiles(profiles); err != nil {
+		return fmt.Errorf("failed to save profiles: %w", err)
+	}
+
+	printSuccess(fmt.Sprintf("Removed connection profile %q", name))
+	return nil
+}
+
+// applyProfileFlags merges a named profile into the connection flags. Explicit
+// command-line flags win over profile values (changed reports whether a flag was
+// set on the command line), and only non-empty profile fields are applied. The
+// password still falls back to the environment via withResolvedPassword when
+// neither a flag nor the profile provides one.
+func applyProfileFlags(conn connectionFlags, changed func(string) bool) (connectionFlags, error) {
+	if conn.Profile == "" {
+		return conn, nil
+	}
+
+	profiles, err := config.LoadProfiles()
+	if err != nil {
+		return conn, fmt.Errorf("failed to load profiles: %w", err)
+	}
+
+	profile, ok := profiles.Find(conn.Profile)
+	if !ok {
+		return conn, fmt.Errorf("connection profile %q not found", conn.Profile)
+	}
+
+	if profile.Host != "" && !changed("host") {
+		conn.Host = profile.Host
+	}
+	if profile.Port != 0 && !changed("port") {
+		conn.Port = profile.Port
+	}
+	if profile.User != "" && !changed("user") {
+		conn.User = profile.User
+	}
+	if profile.Password != "" && !changed("password") {
+		conn.Password = profile.Password
+	}
+	if profile.Database != "" && !changed("database") {
+		conn.Database = profile.Database
+	}
+
+	return conn, nil
 }
 
 func (c connectionFlags) withResolvedPassword() connectionFlags {
