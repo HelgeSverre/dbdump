@@ -4,15 +4,18 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"gopkg.in/yaml.v3"
 )
 
-// ConnectionProfile represents a saved database connection
+// ConnectionProfile represents a saved database connection. Profiles are
+// display-only: `dbdump config list` shows them, but there is currently no way to
+// select a profile for a dump, so no credentials are stored or used here.
 type ConnectionProfile struct {
 	Name     string `yaml:"name"`
 	Host     string `yaml:"host"`
 	Port     int    `yaml:"port"`
 	User     string `yaml:"user"`
-	Password string `yaml:"password,omitempty"`
 	Database string `yaml:"database,omitempty"`
 }
 
@@ -32,7 +35,9 @@ func GetProfilesPath() (string, error) {
 	return filepath.Join(configDir, "profiles.yaml"), nil
 }
 
-// LoadProfiles loads saved connection profiles
+// LoadProfiles loads saved connection profiles. Decoding is intentionally lenient
+// so profiles.yaml files that still carry legacy keys (such as an unused password)
+// keep loading; the extra keys are ignored.
 func LoadProfiles() (*ProfilesConfig, error) {
 	path, err := GetProfilesPath()
 	if err != nil {
@@ -50,7 +55,7 @@ func LoadProfiles() (*ProfilesConfig, error) {
 	}
 
 	var config ProfilesConfig
-	if err := strictUnmarshal(data, &config); err != nil {
+	if err := yaml.Unmarshal(data, &config); err != nil {
 		return nil, fmt.Errorf("failed to parse profiles: %w", err)
 	}
 
