@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-07-27
+
+### Dependencies
+- Bumped `github.com/klauspost/compress` from 1.19.0 to 1.19.1 (zstd SnappyConverter literal-copy validation, faster flate `bufio.Reader` decode path, regenerated arm64 zstd assembly)
+- Bumped `actions/setup-go` from 6 to 7 in CI and release workflows
+
 ## [1.4.0] - 2026-07-14
 
 ### Added
@@ -338,7 +344,8 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ---
 
 <!-- Version comparison links -->
-[Unreleased]: https://github.com/helgesverre/dbdump/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/helgesverre/dbdump/compare/v1.4.1...HEAD
+[1.4.1]: https://github.com/helgesverre/dbdump/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/helgesverre/dbdump/compare/v1.3.2...v1.4.0
 [1.3.2]: https://github.com/helgesverre/dbdump/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/helgesverre/dbdump/compare/v1.3.0...v1.3.1
