@@ -26,7 +26,7 @@ func strictUnmarshal(data []byte, out any) error {
 	return nil
 }
 
-// Default configuration as embedded constant
+// defaultConfigYAML is the built-in exclusion configuration.
 const defaultConfigYAML = `default_excludes:
   exact:
     - activity_log
@@ -46,24 +46,24 @@ const defaultConfigYAML = `default_excludes:
     - "*_cache"
 `
 
-// ExcludeConfig represents the exclude configuration
+// ExcludeConfig lists exact table names and glob patterns whose data is omitted.
 type ExcludeConfig struct {
 	Exact    []string `yaml:"exact"`
 	Patterns []string `yaml:"patterns"`
 }
 
-// Config represents the full configuration
+// Config is the on-disk YAML configuration schema.
 type Config struct {
 	Name    string        `yaml:"name"`
 	Exclude ExcludeConfig `yaml:"exclude"`
 }
 
-// DefaultConfig represents the default excludes
+// DefaultConfig is the built-in configuration document.
 type DefaultConfig struct {
 	DefaultExcludes ExcludeConfig `yaml:"default_excludes"`
 }
 
-// LoadDefaults loads the default exclude patterns
+// LoadDefaults parses the embedded default exclusions.
 func LoadDefaults() (*DefaultConfig, error) {
 	var config DefaultConfig
 	if err := yaml.Unmarshal([]byte(defaultConfigYAML), &config); err != nil {
@@ -73,7 +73,7 @@ func LoadDefaults() (*DefaultConfig, error) {
 	return &config, nil
 }
 
-// LoadConfig loads a project-specific configuration file
+// LoadConfig reads a project-specific configuration file.
 func LoadConfig(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -88,26 +88,23 @@ func LoadConfig(path string) (*Config, error) {
 	return &config, nil
 }
 
-// MergeExcludes merges default excludes with project-specific excludes
+// MergeExcludes combines exclusion layers and removes duplicates.
 func MergeExcludes(defaults *DefaultConfig, project *Config) ExcludeConfig {
 	merged := ExcludeConfig{
 		Exact:    make([]string, 0),
 		Patterns: make([]string, 0),
 	}
 
-	// Add defaults
 	if defaults != nil {
 		merged.Exact = append(merged.Exact, defaults.DefaultExcludes.Exact...)
 		merged.Patterns = append(merged.Patterns, defaults.DefaultExcludes.Patterns...)
 	}
 
-	// Add project-specific (avoiding duplicates)
 	if project != nil {
 		merged.Exact = append(merged.Exact, project.Exclude.Exact...)
 		merged.Patterns = append(merged.Patterns, project.Exclude.Patterns...)
 	}
 
-	// Remove duplicates
 	merged.Exact = UniqueStrings(merged.Exact)
 	merged.Patterns = UniqueStrings(merged.Patterns)
 
@@ -129,7 +126,7 @@ func UniqueStrings(input []string) []string {
 	return result
 }
 
-// GetGlobalConfigPath returns the path to the global config file
+// GetGlobalConfigPath returns the conventional global configuration path.
 func GetGlobalConfigPath() (string, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -139,20 +136,17 @@ func GetGlobalConfigPath() (string, error) {
 	return filepath.Join(homeDir, ".dbdump.yaml"), nil
 }
 
-// LoadGlobalConfig loads the global user config file if it exists
-// Returns nil if the file doesn't exist (which is not an error)
+// LoadGlobalConfig loads the global user configuration. A missing file returns
+// (nil, nil) because global configuration is optional.
 func LoadGlobalConfig() (*Config, error) {
 	configPath, err := GetGlobalConfigPath()
 	if err != nil {
 		return nil, err
 	}
 
-	// Check if file exists
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		// File doesn't exist, return nil (not an error)
 		return nil, nil
 	}
 
-	// File exists, load it
 	return LoadConfig(configPath)
 }

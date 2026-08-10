@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - **[TLS]** Explicit TLS modes now keep their documented semantics when certificate options are also present: `disabled` remains plaintext, `require` does not begin verifying the server, and ambiguous `preferred` plus custom TLS options is rejected before connecting. A standalone `--tls-server-name` now correctly enables identity verification instead of being ignored under `verify-ca` semantics.
 - **[Docs]** Corrected non-interactive dry-run examples and website copy buttons so agents and scripts use `--auto --dry-run` consistently.
+- **[Docs]** Fixed release-install commands to use the filenames actually contained in the archives, corrected Windows PATH setup, removed unsupported performance claims, and clarified that preserving foreign-key definitions does not guarantee logically complete retained data.
 - **[Verification]** Removed stale release-test paths and hardened password process-list checks against vacuous passes.
 
 ### Changed

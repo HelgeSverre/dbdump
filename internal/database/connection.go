@@ -8,7 +8,7 @@ import (
 	"github.com/go-sql-driver/mysql"
 )
 
-// Connection represents a database connection configuration
+// Connection contains the database endpoint and optional SSH and TLS settings.
 type Connection struct {
 	Host     string
 	Port     int
@@ -19,8 +19,8 @@ type Connection struct {
 	TLS      TLSConfig
 }
 
-// DSN returns the data source name for MySQL connection
-// Uses mysql.Config for proper escaping and timeout configuration
+// DSN returns a MySQL driver data source name with escaped credentials and
+// bounded connection and I/O timeouts.
 func (c *Connection) DSN() (string, error) {
 	cfg := mysql.NewConfig()
 	cfg.User = c.User
@@ -44,15 +44,15 @@ func (c *Connection) DSN() (string, error) {
 	return cfg.FormatDSN(), nil
 }
 
-// Connect establishes a connection to the database
+// Connect opens and verifies a database connection.
 func (c *Connection) Connect() (*sql.DB, error) {
 	dsn, err := c.DSN()
 	if err != nil {
 		return nil, err
 	}
 
-	// Register any custom TLS config (custom CA/cert/verify-ca) so the DSN's
-	// tls=<name> parameter resolves before the driver dials.
+	// Register custom certificate and verification settings before the driver
+	// resolves the DSN's tls=<name> parameter.
 	if err := registerCustomTLS(c.TLS); err != nil {
 		return nil, err
 	}
@@ -62,7 +62,7 @@ func (c *Connection) Connect() (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
-	// Verify the connection
+	// sql.Open is lazy, so ping before returning a usable handle.
 	if err := db.Ping(); err != nil {
 		_ = db.Close()
 		return nil, fmt.Errorf("failed to ping database: %w", err)

@@ -4,8 +4,9 @@
 
 dbdump dumps a MySQL/MariaDB database in two phases: (1) it dumps the schema
 (CREATE TABLE, triggers, events) for ALL tables, then (2) it dumps row data only
-for the tables you keep. Excluded tables still appear in the output as empty
-tables, so foreign keys never break on restore. This document is self-contained:
+for the tables you keep. Excluded tables still appear in the output with their
+definitions intact. Retained rows can still depend on omitted parent-table data,
+so exclusions should be reviewed against the schema. This document is self-contained:
 an agent that has never used dbdump can operate it from the information here.
 
 ## Requirements

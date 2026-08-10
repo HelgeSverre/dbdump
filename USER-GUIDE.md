@@ -29,9 +29,9 @@
 
 ### Key Benefits
 
-- **Faster dumps**: Reduce dump time from hours to minutes (verified: 3-4 hours → 15-20 minutes)
-- **Smaller files**: Dramatically reduce file sizes (verified: 15GB → 3.2GB)
-- **Safer approach**: Always preserves ALL table structures, preventing foreign key errors
+- **Faster dumps**: Avoid copying rows that are not useful in development
+- **Smaller files**: Keep schema while omitting noisy table data
+- **Complete schema**: Preserve every table definition, including foreign-key constraints
 - **Smart defaults**: Pre-configured to exclude common "noisy" tables from Laravel and other frameworks
 - **User-friendly**: Interactive table selection with visual feedback
 - **Zero dependencies**: Single binary (requires only `mysqldump` which comes with MySQL)
@@ -43,7 +43,9 @@ dbdump uses a two-phase dump strategy:
 1. **Phase 1 - Structure**: Dumps the schema (CREATE TABLE statements) for ALL tables
 2. **Phase 2 - Data**: Dumps data only for tables you want to keep
 
-This ensures your database structure remains intact (no broken foreign keys!) while excluding unwanted data.
+This keeps the complete schema while excluding unwanted rows. If retained rows
+reference data from an excluded table, the resulting development dataset can
+still contain missing logical relationships, so review exclusions before use.
 
 ---
 
@@ -56,8 +58,8 @@ The release assets are versioned. Download the matching archive from the release
 ```bash
 curl -LO https://github.com/helgesverre/dbdump/releases/download/vX.Y.Z/dbdump-vX.Y.Z-darwin-arm64.tar.gz
 tar -xzf dbdump-vX.Y.Z-darwin-arm64.tar.gz
-chmod +x dbdump-vX.Y.Z-darwin-arm64
-sudo mv dbdump-vX.Y.Z-darwin-arm64 /usr/local/bin/dbdump
+chmod +x dbdump-darwin-arm64
+sudo mv dbdump-darwin-arm64 /usr/local/bin/dbdump
 ```
 
 ### From Source
@@ -84,30 +86,27 @@ mysqldump --version
 
 ## Quick Start
 
-The fastest way to get started:
+Set the password in the environment so it does not appear in process arguments:
 
 ```bash
+export DBDUMP_MYSQL_PWD=yourpassword
+
 # Basic usage with interactive mode
-dbdump dump -u root -p yourpassword -d mydatabase
+dbdump dump -u root -d mydatabase
 
 # Auto mode (uses smart defaults, no interaction)
-dbdump dump -u root -p yourpassword -d mydatabase --auto
+dbdump dump -u root -d mydatabase --auto
 
 # Specify output file
-dbdump dump -u root -p yourpassword -d mydatabase -o backup.sql
+dbdump dump -u root -d mydatabase -o backup.sql
 
 # Stream-compressed dump
-dbdump dump -u root -p yourpassword -d mydatabase --compress gzip
+dbdump dump -u root -d mydatabase --auto --compress gzip
 ```
 
-For security, you should use environment variables for passwords:
+`MYSQL_PWD` is also supported as a fallback:
 
 ```bash
-# Recommended: Use dbdump-specific variable
-export DBDUMP_MYSQL_PWD=yourpassword
-dbdump dump -H localhost -u root -d mydatabase
-
-# Alternative: Standard MySQL variable (fallback)
 export MYSQL_PWD=yourpassword
 dbdump dump -H localhost -u root -d mydatabase
 ```
@@ -504,6 +503,7 @@ Need to exclude something specific just this once:
 
 ```bash
 dbdump dump -H localhost -u root -d mydb \
+  --auto \
   --exclude user_activity \
   --exclude api_logs \
   --exclude-pattern "temp_*" \
@@ -654,7 +654,10 @@ No! dbdump never modifies your source database. It only creates a dump file.
 
 ### Will excluding tables break foreign keys?
 
-No! The two-phase approach ensures ALL table structures are preserved in the dump. Only the DATA is excluded for specified tables.
+The foreign-key definitions remain in the dump because every table's structure
+is preserved. However, excluding parent-table rows can leave retained data with
+missing logical relationships. Use a dry run and choose exclusions that fit your
+schema.
 
 ### Can I use this in production?
 
@@ -676,7 +679,7 @@ mysql -u root -p database_name < dump_file.sql
 Yes! Use interactive mode and deselect all tables, or configure patterns to match everything:
 
 ```bash
-dbdump dump -H localhost -u root -d mydb --exclude-pattern "*"
+dbdump dump -H localhost -u root -d mydb --auto --exclude-pattern "*"
 ```
 
 ### What's the difference between exact and patterns?
@@ -686,9 +689,9 @@ dbdump dump -H localhost -u root -d mydb --exclude-pattern "*"
 
 ### Can I include only specific tables?
 
-dbdump focuses on exclusion, but you can achieve this by:
-1. Excluding everything: `--exclude-pattern "*"`
-2. Using interactive mode to manually select only what you want
+Use interactive mode and select only the tables whose data you want. There is
+currently no `--include` flag; `--exclude-pattern "*"` creates a schema-only
+dump rather than allowing selected tables back in.
 
 ### How do I update my global config?
 
@@ -735,10 +738,9 @@ dbdump doesn't modify or send data anywhere—it's just a wrapper around `mysqld
 
 ## Additional Resources
 
-- **README.md**: Project overview and quick reference
-- **BENCHMARKING.md**: How to run performance tests
-- **VERIFIED_PERFORMANCE.md**: Real-world benchmark results
-- **CHANGELOG.md**: Version history
+- **[README.md](README.md)**: Project overview and quick reference
+- **[BENCHMARKING.md](BENCHMARKING.md)**: Performance testing and result interpretation
+- **[CHANGELOG.md](CHANGELOG.md)**: Version history
 
 ---
 

@@ -385,4 +385,4 @@ MYSQL_PORT=3309 just bench testdb 3
 
 - [Go Profiling](https://go.dev/blog/pprof)
 - [MySQL Performance Tuning](https://dev.mysql.com/doc/refman/8.0/en/optimization.html)
-- [Benchmarking Best Practices](https://go.dev/blog/benchmarks)
+- [Go performance testing principles](https://go.dev/wiki/PerformanceMonitoring)

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>dbdump - Fast MySQL Dump Tool</title>
-    <meta name="description" content="Fast MySQL dump tool that excludes noisy data while preserving complete database structure. Reduce dump time from hours to minutes.">
+    <meta name="description" content="MySQL and MariaDB dump tool that omits noisy table data while preserving the complete database schema.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Monda:wght@400;700&display=swap" rel="stylesheet">
@@ -34,9 +34,9 @@
             </h1>
             <p class="subtitle">Fast MySQL dumps without the noise</p>
             <p class="description">
-                Reduce database dump time from hours to minutes by automatically
-                excluding audit logs, sessions, and cache tables while keeping
-                your schema intact.
+                Make development dumps smaller and faster by automatically
+                excluding audit logs, sessions, and cache data while keeping
+                your complete schema.
             </p>
             <div class="hero-actions">
                 <a href="#install" class="btn btn-primary">Get Started</a>
@@ -56,17 +56,17 @@
                 <div class="benefit">
                     <div class="benefit-icon">~</div>
                     <h3>Faster Dumps</h3>
-                    <p>3-4 hours down to 15-20 minutes</p>
+                    <p>Skip rows you do not need in development</p>
                 </div>
                 <div class="benefit">
                     <div class="benefit-icon">&lt;</div>
                     <h3>Smaller Files</h3>
-                    <p>15GB down to 3GB</p>
+                    <p>Keep schema without copying noisy data</p>
                 </div>
                 <div class="benefit">
                     <div class="benefit-icon">*</div>
-                    <h3>No Broken Keys</h3>
-                    <p>All table structures preserved</p>
+                    <h3>Complete Schema</h3>
+                    <p>All table definitions and constraints preserved</p>
                 </div>
             </div>
         </section>
@@ -132,48 +132,48 @@
                     <div class="code-block">
                         <pre><code>curl -LO https://github.com/helgesverre/dbdump/releases/download/vX.Y.Z/dbdump-vX.Y.Z-darwin-arm64.tar.gz
 tar -xzf dbdump-vX.Y.Z-darwin-arm64.tar.gz
-chmod +x dbdump-vX.Y.Z-darwin-arm64
-sudo mv dbdump-vX.Y.Z-darwin-arm64 /usr/local/bin/dbdump</code></pre>
+chmod +x dbdump-darwin-arm64
+sudo mv dbdump-darwin-arm64 /usr/local/bin/dbdump</code></pre>
                         <button class="copy-btn" data-copy="curl -LO https://github.com/helgesverre/dbdump/releases/download/vX.Y.Z/dbdump-vX.Y.Z-darwin-arm64.tar.gz
 tar -xzf dbdump-vX.Y.Z-darwin-arm64.tar.gz
-chmod +x dbdump-vX.Y.Z-darwin-arm64
-sudo mv dbdump-vX.Y.Z-darwin-arm64 /usr/local/bin/dbdump">Copy</button>
+chmod +x dbdump-darwin-arm64
+sudo mv dbdump-darwin-arm64 /usr/local/bin/dbdump">Copy</button>
                     </div>
                 </div>
                 <div id="mac-intel" class="platform-instructions">
                     <div class="code-block">
                         <pre><code>curl -LO https://github.com/helgesverre/dbdump/releases/download/vX.Y.Z/dbdump-vX.Y.Z-darwin-amd64.tar.gz
 tar -xzf dbdump-vX.Y.Z-darwin-amd64.tar.gz
-chmod +x dbdump-vX.Y.Z-darwin-amd64
-sudo mv dbdump-vX.Y.Z-darwin-amd64 /usr/local/bin/dbdump</code></pre>
+chmod +x dbdump-darwin-amd64
+sudo mv dbdump-darwin-amd64 /usr/local/bin/dbdump</code></pre>
                         <button class="copy-btn" data-copy="curl -LO https://github.com/helgesverre/dbdump/releases/download/vX.Y.Z/dbdump-vX.Y.Z-darwin-amd64.tar.gz
 tar -xzf dbdump-vX.Y.Z-darwin-amd64.tar.gz
-chmod +x dbdump-vX.Y.Z-darwin-amd64
-sudo mv dbdump-vX.Y.Z-darwin-amd64 /usr/local/bin/dbdump">Copy</button>
+chmod +x dbdump-darwin-amd64
+sudo mv dbdump-darwin-amd64 /usr/local/bin/dbdump">Copy</button>
                     </div>
                 </div>
                 <div id="linux-amd" class="platform-instructions">
                     <div class="code-block">
                         <pre><code>curl -LO https://github.com/helgesverre/dbdump/releases/download/vX.Y.Z/dbdump-vX.Y.Z-linux-amd64.tar.gz
 tar -xzf dbdump-vX.Y.Z-linux-amd64.tar.gz
-chmod +x dbdump-vX.Y.Z-linux-amd64
-sudo mv dbdump-vX.Y.Z-linux-amd64 /usr/local/bin/dbdump</code></pre>
+chmod +x dbdump-linux-amd64
+sudo mv dbdump-linux-amd64 /usr/local/bin/dbdump</code></pre>
                         <button class="copy-btn" data-copy="curl -LO https://github.com/helgesverre/dbdump/releases/download/vX.Y.Z/dbdump-vX.Y.Z-linux-amd64.tar.gz
 tar -xzf dbdump-vX.Y.Z-linux-amd64.tar.gz
-chmod +x dbdump-vX.Y.Z-linux-amd64
-sudo mv dbdump-vX.Y.Z-linux-amd64 /usr/local/bin/dbdump">Copy</button>
+chmod +x dbdump-linux-amd64
+sudo mv dbdump-linux-amd64 /usr/local/bin/dbdump">Copy</button>
                     </div>
                 </div>
                 <div id="linux-arm" class="platform-instructions">
                     <div class="code-block">
                         <pre><code>curl -LO https://github.com/helgesverre/dbdump/releases/download/vX.Y.Z/dbdump-vX.Y.Z-linux-arm64.tar.gz
 tar -xzf dbdump-vX.Y.Z-linux-arm64.tar.gz
-chmod +x dbdump-vX.Y.Z-linux-arm64
-sudo mv dbdump-vX.Y.Z-linux-arm64 /usr/local/bin/dbdump</code></pre>
+chmod +x dbdump-linux-arm64
+sudo mv dbdump-linux-arm64 /usr/local/bin/dbdump</code></pre>
                         <button class="copy-btn" data-copy="curl -LO https://github.com/helgesverre/dbdump/releases/download/vX.Y.Z/dbdump-vX.Y.Z-linux-arm64.tar.gz
 tar -xzf dbdump-vX.Y.Z-linux-arm64.tar.gz
-chmod +x dbdump-vX.Y.Z-linux-arm64
-sudo mv dbdump-vX.Y.Z-linux-arm64 /usr/local/bin/dbdump">Copy</button>
+chmod +x dbdump-linux-arm64
+sudo mv dbdump-linux-arm64 /usr/local/bin/dbdump">Copy</button>
                     </div>
                 </div>
                 <div id="windows" class="platform-instructions">
@@ -181,17 +181,21 @@ sudo mv dbdump-vX.Y.Z-linux-arm64 /usr/local/bin/dbdump">Copy</button>
                         <pre><code># Download and extract
 Invoke-WebRequest -Uri https://github.com/helgesverre/dbdump/releases/download/vX.Y.Z/dbdump-vX.Y.Z-windows-amd64.zip -OutFile dbdump.zip
 Expand-Archive dbdump.zip -DestinationPath $HOME\dbdump -Force
+Rename-Item $HOME\dbdump\dbdump-windows-amd64.exe dbdump.exe -Force
 
 # Add to PATH (run once)
-$env:PATH += ";$HOME\dbdump"
-[Environment]::SetEnvironmentVariable("PATH", $env:PATH + ";$HOME\dbdump", "User")</code></pre>
+$userPath = [Environment]::GetEnvironmentVariable("PATH", "User")
+[Environment]::SetEnvironmentVariable("PATH", "$userPath;$HOME\dbdump", "User")
+$env:PATH += ";$HOME\dbdump"</code></pre>
                         <button class="copy-btn" data-copy="# Download and extract
 Invoke-WebRequest -Uri https://github.com/helgesverre/dbdump/releases/download/vX.Y.Z/dbdump-vX.Y.Z-windows-amd64.zip -OutFile dbdump.zip
 Expand-Archive dbdump.zip -DestinationPath $HOME\dbdump -Force
+Rename-Item $HOME\dbdump\dbdump-windows-amd64.exe dbdump.exe -Force
 
 # Add to PATH (run once)
-$env:PATH += &quot;;$HOME\dbdump&quot;
-[Environment]::SetEnvironmentVariable(&quot;PATH&quot;, $env:PATH + &quot;;$HOME\dbdump&quot;, &quot;User&quot;)">Copy</button>
+$userPath = [Environment]::GetEnvironmentVariable(&quot;PATH&quot;, &quot;User&quot;)
+[Environment]::SetEnvironmentVariable(&quot;PATH&quot;, &quot;$userPath;$HOME\dbdump&quot;, &quot;User&quot;)
+$env:PATH += &quot;;$HOME\dbdump&quot;">Copy</button>
                     </div>
                 </div>
             </div>
@@ -246,7 +250,7 @@ $env:PATH += &quot;;$HOME\dbdump&quot;
                     <li><strong>Phase 1 - Structure:</strong> Dumps the schema (CREATE TABLE) for ALL tables</li>
                     <li><strong>Phase 2 - Data:</strong> Dumps data only for tables you want to keep</li>
                 </ol>
-                <p>This means excluded tables will exist in your dump as empty tables, so foreign keys never break.</p>
+                <p>Excluded tables remain in the dump with their definitions intact. Review exclusions when retained rows depend on omitted parent-table data.</p>
             </article>
 
             <!-- Commands -->
@@ -395,12 +399,12 @@ dbdump dump -H localhost -u root -d mydb --auto --compress zstd</code></pre>
 
                 <h4>1. Command Line</h4>
                 <div class="code-block">
-                    <pre><code>dbdump dump -H localhost -u root -d mydb \
+                    <pre><code>dbdump dump -H localhost -u root -d mydb --auto \
   --exclude sessions \
   --exclude cache \
   --exclude-pattern "log_*" \
   --exclude-pattern "temp_*"</code></pre>
-                    <button class="copy-btn" data-copy="dbdump dump -H localhost -u root -d mydb --exclude sessions --exclude cache --exclude-pattern 'log_*'">Copy</button>
+                    <button class="copy-btn" data-copy="dbdump dump -H localhost -u root -d mydb --auto --exclude sessions --exclude cache --exclude-pattern 'log_*' --exclude-pattern 'temp_*'">Copy</button>
                 </div>
 
                 <h4>2. Project Config File</h4>
@@ -428,8 +432,8 @@ exclude:
                 </div>
                 <p>Use it with:</p>
                 <div class="code-block">
-                    <pre><code>dbdump dump -H localhost -u root -d mydb --config ./myproject.yaml</code></pre>
-                    <button class="copy-btn" data-copy="dbdump dump -H localhost -u root -d mydb --config ./myproject.yaml">Copy</button>
+                    <pre><code>dbdump dump -H localhost -u root -d mydb --auto --config ./myproject.yaml</code></pre>
+                    <button class="copy-btn" data-copy="dbdump dump -H localhost -u root -d mydb --auto --config ./myproject.yaml">Copy</button>
                 </div>
 
                 <h4>3. Global Config</h4>
@@ -617,14 +621,14 @@ zstd -dc dump_file.sql.zst | mysql -u root -p mydb</code></pre>
                 <details>
                     <summary>Will excluding tables break foreign keys?</summary>
                     <div class="details-content">
-                        <p>No. All table structures are preserved. Only the data is excluded for specified tables.</p>
+                        <p>All foreign-key definitions are preserved. Excluding parent-table rows can still leave retained data with missing logical relationships, so preview the plan before dumping.</p>
                     </div>
                 </details>
 
                 <details>
                     <summary>Can I dump only the schema?</summary>
                     <div class="details-content">
-                        <p>Yes! Exclude all tables: <code>dbdump dump -H localhost -u root -d mydb --exclude-pattern "*"</code></p>
+                        <p>Yes. Exclude every table's data while preserving its structure: <code>dbdump dump -H localhost -u root -d mydb --auto --exclude-pattern "*"</code></p>
                     </div>
                 </details>
 

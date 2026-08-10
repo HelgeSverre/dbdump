@@ -8,7 +8,7 @@
 [![Tests](https://github.com/helgesverre/dbdump/actions/workflows/test.yml/badge.svg)](https://github.com/helgesverre/dbdump/actions/workflows/test.yml)
 [![Release](https://github.com/helgesverre/dbdump/actions/workflows/release.yml/badge.svg)](https://github.com/helgesverre/dbdump/actions/workflows/release.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/helgesverre/dbdump)](https://goreportcard.com/report/github.com/helgesverre/dbdump)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/license/MIT)
 [![dbdump](https://img.shields.io/badge/dbdump-0F172A?style=flat&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyNCAyNCcgZmlsbD0nd2hpdGUnPjxwYXRoIGQ9J004LjAwNDg4IDUuMDAyODFIMTEuMDA0OVYxNC4wMDI4SDguMDA0ODhWMTcuMDAyOEg2LjAwNDg4VjE0LjAwMjhIMy4wMDQ4OFY1LjAwMjgxSDYuMDA0ODhWMi4wMDI4MUg4LjAwNDg4VjUuMDAyODFaTTUuMDA0ODggNy4wMDI4MVYxMi4wMDI4SDkuMDA0ODhWNy4wMDI4MUg1LjAwNDg4Wk0xOC4wMDQ5IDEwLjAwMjhIMjEuMDA0OVYxOS4wMDI4SDE4LjAwNDlWMjIuMDAyOEgxNi4wMDQ5VjE5LjAwMjhIMTMuMDA0OVYxMC4wMDI4SDE2LjAwNDlWNy4wMDI4MUgxOC4wMDQ5VjEwLjAwMjhaTTE1LjAwNDkgMTIuMDAyOFYxNy4wMDI4SDE5LjAwNDlWMTIuMDAyOEgxNS4wMDQ5Wic+PC9wYXRoPjwvc3ZnPgo=)](https://dbdump-five.vercel.app/)
 
 Fast MySQL dump tool that excludes noisy data while preserving complete database structure.
@@ -23,8 +23,8 @@ cache records. These tables can make dumps take hours and consume gigabytes of s
 **dbdump solves this by:**
 
 - Excluding data from noisy tables (audits, sessions, cache, etc.)
-- Always preserving table structure (no broken foreign keys)
-- Reducing dump time from hours to minutes
+- Preserving every table definition, including foreign-key constraints
+- Reducing work in proportion to the rows excluded
 - Making development database refreshes practical
 
 ## Installation
@@ -54,8 +54,8 @@ Download the matching versioned asset from the [releases page](https://github.co
 ```bash
 curl -LO https://github.com/helgesverre/dbdump/releases/download/vX.Y.Z/dbdump-vX.Y.Z-darwin-arm64.tar.gz
 tar -xzf dbdump-vX.Y.Z-darwin-arm64.tar.gz
-chmod +x dbdump-vX.Y.Z-darwin-arm64
-sudo mv dbdump-vX.Y.Z-darwin-arm64 /usr/local/bin/dbdump
+chmod +x dbdump-darwin-arm64
+sudo mv dbdump-darwin-arm64 /usr/local/bin/dbdump
 ```
 
 #### macOS (Intel)
@@ -63,8 +63,8 @@ sudo mv dbdump-vX.Y.Z-darwin-arm64 /usr/local/bin/dbdump
 ```bash
 curl -LO https://github.com/helgesverre/dbdump/releases/download/vX.Y.Z/dbdump-vX.Y.Z-darwin-amd64.tar.gz
 tar -xzf dbdump-vX.Y.Z-darwin-amd64.tar.gz
-chmod +x dbdump-vX.Y.Z-darwin-amd64
-sudo mv dbdump-vX.Y.Z-darwin-amd64 /usr/local/bin/dbdump
+chmod +x dbdump-darwin-amd64
+sudo mv dbdump-darwin-amd64 /usr/local/bin/dbdump
 ```
 
 #### Linux (AMD64)
@@ -72,8 +72,8 @@ sudo mv dbdump-vX.Y.Z-darwin-amd64 /usr/local/bin/dbdump
 ```bash
 curl -LO https://github.com/helgesverre/dbdump/releases/download/vX.Y.Z/dbdump-vX.Y.Z-linux-amd64.tar.gz
 tar -xzf dbdump-vX.Y.Z-linux-amd64.tar.gz
-chmod +x dbdump-vX.Y.Z-linux-amd64
-sudo mv dbdump-vX.Y.Z-linux-amd64 /usr/local/bin/dbdump
+chmod +x dbdump-linux-amd64
+sudo mv dbdump-linux-amd64 /usr/local/bin/dbdump
 ```
 
 #### Linux (ARM64)
@@ -81,13 +81,13 @@ sudo mv dbdump-vX.Y.Z-linux-amd64 /usr/local/bin/dbdump
 ```bash
 curl -LO https://github.com/helgesverre/dbdump/releases/download/vX.Y.Z/dbdump-vX.Y.Z-linux-arm64.tar.gz
 tar -xzf dbdump-vX.Y.Z-linux-arm64.tar.gz
-chmod +x dbdump-vX.Y.Z-linux-arm64
-sudo mv dbdump-vX.Y.Z-linux-arm64 /usr/local/bin/dbdump
+chmod +x dbdump-linux-arm64
+sudo mv dbdump-linux-arm64 /usr/local/bin/dbdump
 ```
 
 #### Windows (AMD64)
 
-Download the versioned Windows asset from the [releases page](https://github.com/helgesverre/dbdump/releases), extract it, and add the executable to your PATH.
+Download the versioned Windows asset from the [releases page](https://github.com/helgesverre/dbdump/releases), extract `dbdump-windows-amd64.exe`, rename it to `dbdump.exe`, and place it on your `PATH`.
 
 #### Verify Installation
 
@@ -370,7 +370,7 @@ dbdump uses a two-phase approach:
 
 1. **Phase 1: Structure Dump**
     - Dumps complete schema for ALL tables
-    - Ensures foreign keys and relationships are preserved
+    - Preserves foreign-key definitions and other table relationships
     - Uses `mysqldump --no-data`
 
 2. **Phase 2: Data Dump**
@@ -379,27 +379,13 @@ dbdump uses a two-phase approach:
 
 Result: A complete database dump with empty noisy tables.
 
-## Real-World Example
+## Expected Impact
 
-**Before (standard mysqldump):**
-
-- Database: 15GB total
-- Audits table: 12GB (10M rows)
-- Actual data needed: 3GB
-- Dump time: 3-4 hours
-- Transfer time: 2+ hours
-
-**After (using dbdump):**
-
-- Excludes: audits, telescope_entries, sessions
-- Output: 3.2GB (structure for all, data for non-noisy)
-- Dump time: 15-20 minutes
-- Transfer time: 30 minutes
-
-**Time saved: 4-5 hours per database refresh**
-
-> **Note:** Performance improvements vary based on database structure, server resources, and excluded table sizes.
-> Typical improvements range from 5-20% faster than equivalent mysqldump commands.
+The savings depend on how much of the source database is in excluded tables.
+Applications dominated by audit logs, sessions, caches, or telemetry benefit the
+most: dbdump retains those tables' definitions while omitting their rows. Run
+`dbdump list`, followed by `dbdump dump --auto --dry-run`, to estimate the impact
+for your database before creating a dump.
 
 ## Documentation
 
@@ -496,7 +482,7 @@ MIT License - see LICENSE file for details
 ### Branding
 
 - Font: [Monda](https://fonts.google.com/specimen/Monda)
-- Icon: [Remix - Stock Line](https://remixicon.com/icon/stock-line)
+- Icon: [Remix Icon](https://remixicon.com/)
 - Colors:
     - Dark: `#0F172A`
     - Icon: `#F9FAFB`

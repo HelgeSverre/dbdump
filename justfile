@@ -238,7 +238,7 @@ example-dump: build
 [group('examples')]
 [doc('Example: dry run')]
 example-dry-run: build
-    ./{{build_dir}}/{{binary_name}} dump -H localhost -u root -d mydb --dry-run
+    ./{{build_dir}}/{{binary_name}} dump -H localhost -u root -d mydb --auto --dry-run
 
 # === Release ===
 
