@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **[Docs]** Corrected non-interactive dry-run examples and website copy buttons so agents and scripts use `--auto --dry-run` consistently.
 - **[Docs]** Fixed release-install commands to use the filenames actually contained in the archives, corrected Windows PATH setup, removed unsupported performance claims, and clarified that preserving foreign-key definitions does not guarantee logically complete retained data.
 - **[Verification]** Removed stale release-test paths and hardened password process-list checks against vacuous passes.
+- **[CI]** Updated the Codecov upload input to remove a deprecated workflow warning.
 
 ### Changed
 - **[Agents]** Expanded the deployed `/llms.txt` with a safe setup sequence, validation steps, operational guidance, and troubleshooting.
