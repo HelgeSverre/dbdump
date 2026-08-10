@@ -7,16 +7,54 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+cd "$PROJECT_ROOT"
 
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 PASSED=0
 FAILED=0
+
+start_hanging_endpoint() {
+    ENDPOINT_PORT_FILE="$(mktemp)"
+    python3 - "$ENDPOINT_PORT_FILE" <<'PY' &
+import socket
+import sys
+import time
+
+s = socket.socket()
+s.bind(("127.0.0.1", 0))
+s.listen(1)
+with open(sys.argv[1], "w", encoding="utf-8") as port_file:
+    port_file.write(str(s.getsockname()[1]))
+conn, _ = s.accept()
+time.sleep(10)
+conn.close()
+s.close()
+PY
+    ENDPOINT_PID=$!
+    for _ in {1..20}; do
+        if [ -s "$ENDPOINT_PORT_FILE" ]; then
+            ENDPOINT_PORT="$(cat "$ENDPOINT_PORT_FILE")"
+            return 0
+        fi
+        kill -0 "$ENDPOINT_PID" 2>/dev/null || return 1
+        sleep 0.05
+    done
+    return 1
+}
+
+stop_hanging_endpoint() {
+    kill "${ENDPOINT_PID:-}" 2>/dev/null || true
+    wait "${ENDPOINT_PID:-}" 2>/dev/null || true
+    rm -f "${ENDPOINT_PORT_FILE:-}"
+    ENDPOINT_PID=""
+    ENDPOINT_PORT=""
+    ENDPOINT_PORT_FILE=""
+}
 
 log_test() {
     echo -e "${BLUE}[TEST]${NC} $1"
@@ -55,18 +93,17 @@ log_test "Test 1: Password hidden when using DBDUMP_MYSQL_PWD"
 TEST_PASSWORD="super_secret_password_12345"
 export DBDUMP_MYSQL_PWD="$TEST_PASSWORD"
 
-# Start dbdump in background (will fail to connect but that's OK)
-"$PROJECT_ROOT/bin/dbdump" dump -H 127.0.0.1 -P 9999 -u root -d testdb --auto -o /tmp/test_security_dump1.sql &>/dev/null &
+start_hanging_endpoint
+"$PROJECT_ROOT/bin/dbdump" dump -H 127.0.0.1 -P "$ENDPOINT_PORT" -u root -d testdb --auto -o /tmp/test_security_dump1.sql &>/dev/null &
 DUMP_PID=$!
 
-# Give it a moment to start
-sleep 0.5
+sleep 0.3
 
-# Check if password appears in process list
-if ps aux | grep "$DUMP_PID" | grep -v grep | grep -q "$TEST_PASSWORD"; then
+if ! kill -0 "$DUMP_PID" 2>/dev/null; then
+    log_fail "dbdump exited before its command line could be inspected"
+elif ps -p "$DUMP_PID" -o command= | grep -Fq "$TEST_PASSWORD"; then
     log_fail "Password '$TEST_PASSWORD' is visible in process list!"
-    ps aux | grep "$DUMP_PID" | grep -v grep
-    SECURITY_BREACH=1
+    ps -p "$DUMP_PID" -o command=
 else
     log_pass "Password NOT visible in process list (DBDUMP_MYSQL_PWD)"
 fi
@@ -74,6 +111,7 @@ fi
 # Cleanup
 kill $DUMP_PID 2>/dev/null || true
 wait $DUMP_PID 2>/dev/null || true
+stop_hanging_endpoint
 unset DBDUMP_MYSQL_PWD
 rm -f /tmp/test_security_dump1.sql
 
@@ -84,21 +122,24 @@ log_test "Test 2: Password hidden when using MYSQL_PWD"
 
 export MYSQL_PWD="$TEST_PASSWORD"
 
-"$PROJECT_ROOT/bin/dbdump" dump -H 127.0.0.1 -P 9999 -u root -d testdb --auto -o /tmp/test_security_dump2.sql &>/dev/null &
+start_hanging_endpoint
+"$PROJECT_ROOT/bin/dbdump" dump -H 127.0.0.1 -P "$ENDPOINT_PORT" -u root -d testdb --auto -o /tmp/test_security_dump2.sql &>/dev/null &
 DUMP_PID=$!
 
-sleep 0.5
+sleep 0.3
 
-if ps aux | grep "$DUMP_PID" | grep -v grep | grep -q "$TEST_PASSWORD"; then
+if ! kill -0 "$DUMP_PID" 2>/dev/null; then
+    log_fail "dbdump exited before its command line could be inspected"
+elif ps -p "$DUMP_PID" -o command= | grep -Fq "$TEST_PASSWORD"; then
     log_fail "Password '$TEST_PASSWORD' is visible in process list!"
-    ps aux | grep "$DUMP_PID" | grep -v grep
-    SECURITY_BREACH=1
+    ps -p "$DUMP_PID" -o command=
 else
     log_pass "Password NOT visible in process list (MYSQL_PWD)"
 fi
 
 kill $DUMP_PID 2>/dev/null || true
 wait $DUMP_PID 2>/dev/null || true
+stop_hanging_endpoint
 unset MYSQL_PWD
 rm -f /tmp/test_security_dump2.sql
 
@@ -121,9 +162,11 @@ if command -v docker &>/dev/null && docker compose -f docker/docker-compose.yml 
     sleep 2
     
     # Check all processes including mysqldump
-    if ps aux | grep -E "mysqldump|dbdump" | grep -v grep | grep -q "testpass123"; then
+    # shellcheck disable=SC2009 # We need full command lines, not only matching PIDs.
+    if ps -axo command= | grep -E '[m]ysqldump|[d]bdump' | grep -q "testpass123"; then
         log_fail "Password visible in mysqldump or dbdump process!"
-        ps aux | grep -E "mysqldump|dbdump" | grep -v grep
+        # shellcheck disable=SC2009 # Print the exact command lines on failure.
+        ps -axo command= | grep -E '[m]ysqldump|[d]bdump'
     else
         log_pass "Password NOT visible in dbdump or mysqldump processes"
     fi
@@ -131,7 +174,7 @@ if command -v docker &>/dev/null && docker compose -f docker/docker-compose.yml 
     # Positive test: dump succeeds with password sourced via env and handed off securely
     log_test "Test 3b: mysqldump authentication handoff works"
     # We can't easily check child process env, but we can verify the dump works
-    wait $DUMP_PID
+    wait "$DUMP_PID"
     
     if [ -f /tmp/test_security_dump3.sql ] && [ -s /tmp/test_security_dump3.sql ]; then
         log_pass "Dump completed successfully with secure mysqldump auth handoff"
@@ -173,8 +216,7 @@ if command -v docker &>/dev/null && docker compose -f docker/docker-compose.yml 
             log_fail "File permissions are $PERMS (expected 600)"
         fi
         
-        # Also show human-readable format
-        ls -la /tmp/test_security_perms.sql | awk '{print "  Permissions: " $1 " Owner: " $3}'
+        echo "  Permissions: $PERMS"
     else
         log_fail "Dump file was not created"
     fi
@@ -223,11 +265,7 @@ echo ""
 if [ $FAILED -eq 0 ]; then
     echo -e "${GREEN}✓ All security tests passed!${NC}"
     echo ""
-    echo "Summary:"
-    echo "  ✓ Passwords hidden from process lists"
-    echo "  ✓ Passwords not passed via command-line arguments"
-    echo "  ✓ Temporary defaults-extra-file used correctly"
-    echo "  ✓ Dump files created with restrictive permissions (0600)"
+    echo "All executed checks passed; Docker-dependent checks are reported above when skipped."
     echo ""
     exit 0
 else

@@ -13,6 +13,8 @@
 
 Fast MySQL dump tool that excludes noisy data while preserving complete database structure.
 
+Using dbdump from an agent or automation? Start with the deployed [llms.txt](https://dbdump-five.vercel.app/llms.txt) for a concise, non-interactive setup and safety guide.
+
 ## Why dbdump?
 
 When dumping production databases for development, you often don't need millions of audit log entries, session data, or
@@ -163,8 +165,8 @@ dbdump dump -H localhost -u root -d mydb
 # List tables with sizes
 dbdump list -H localhost -u root -d mydb
 
-# Dry run (see what would be excluded)
-dbdump dump -H localhost -u root -d mydb --dry-run
+# Non-interactive dry run (see what would be excluded)
+dbdump dump -H localhost -u root -d mydb --auto --dry-run
 
 # Dump with custom output file
 dbdump dump -H localhost -u root -d mydb -o backup.sql
@@ -254,7 +256,7 @@ dbdump dump -H db.example.com -u readonly -d myapp \
 dbdump dump -H localhost -u root -d mydb --tls-mode require --tls-skip-verify --auto
 ```
 
-Modes mirror MySQL's `ssl-mode`: `disabled`, `preferred` (opportunistic), `require` (encrypt, no verification), `verify-ca` (verify the chain), and `verify-identity` (verify the chain and hostname). Behind an SSH tunnel the host becomes `127.0.0.1`, so use `--tls-server-name` to pin the real certificate name. With no `--tls-*` flag, connections behave exactly as before.
+Modes mirror MySQL's `ssl-mode`: `disabled`, `preferred` (opportunistic), `require` (encrypt, no verification), `verify-ca` (verify the chain), and `verify-identity` (verify the chain and hostname). An explicit `disabled` mode ignores certificate options and remains plaintext. Because custom certificates cannot preserve opportunistic fallback consistently across both clients, combine them with `require`, `verify-ca`, or `verify-identity`, not `preferred`. Behind an SSH tunnel the host becomes `127.0.0.1`, so use `--tls-server-name` to pin the real certificate name. With no `--tls-*` flag, connections behave exactly as before.
 
 ### Examples
 
@@ -463,7 +465,7 @@ grep -i "CREATE EVENT" testdb_*.sql
 ### Project Structure
 
 ```
-dump-tool/
+dbdump/
 ├── cmd/dbdump/          # CLI entry point
 ├── internal/
 │   ├── config/          # Configuration management

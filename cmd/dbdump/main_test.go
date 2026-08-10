@@ -309,6 +309,17 @@ func TestValidateRejectsUnpairedTLSCert(t *testing.T) {
 	}
 }
 
+func TestValidateRejectsPreferredWithCustomTLSOptions(t *testing.T) {
+	err := connectionFlags{
+		User:     "root",
+		Database: "db",
+		TLS:      database.TLSConfig{Mode: database.TLSPreferred, CAFile: "/ca.pem"},
+	}.validate()
+	if err == nil || !strings.Contains(err.Error(), "preferred cannot be combined") {
+		t.Fatalf("expected preferred-mode validation error, got %v", err)
+	}
+}
+
 func TestApplyProfileFlagsWithoutProfileIsNoop(t *testing.T) {
 	conn := connectionFlags{Host: "127.0.0.1", User: "root", Database: "testdb"}
 	got, err := applyProfileFlags(conn, func(string) bool { return false })
@@ -604,6 +615,31 @@ func TestRunDumpRejectsInvalidCompressionBeforeConnecting(t *testing.T) {
 	)
 	if err == nil || !strings.Contains(err.Error(), "unsupported compression") {
 		t.Fatalf("expected unsupported compression error, got %v", err)
+	}
+}
+
+func TestRunDumpRejectsInvalidTLSBeforeConnecting(t *testing.T) {
+	stubOpenInspection(t, func(*database.Connection) (inspectionSession, tableInspector, error) {
+		t.Fatal("should not connect when TLS options are invalid")
+		return nil, nil, nil
+	})
+	stubStartSSHTunnel(t, func(context.Context, *database.Connection) (func() error, error) {
+		t.Fatal("should not start an SSH tunnel when TLS options are invalid")
+		return nil, nil
+	})
+
+	err := runDump(
+		connectionFlags{
+			Host:     "127.0.0.1",
+			Port:     3306,
+			User:     "root",
+			Database: "testdb",
+			TLS:      database.TLSConfig{Mode: database.TLSPreferred, CAFile: "/ca.pem"},
+		},
+		dumpFlags{AutoMode: true},
+	)
+	if err == nil || !strings.Contains(err.Error(), "preferred cannot be combined") {
+		t.Fatalf("expected TLS validation error, got %v", err)
 	}
 }
 

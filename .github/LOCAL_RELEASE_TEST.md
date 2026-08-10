@@ -66,7 +66,7 @@ zip dbdump-v1.1.0-windows-amd64.zip dbdump-windows-amd64.exe
 
 ```bash
 cd /tmp
-tar -xzf ~/code/dump-tool/bin/dbdump-v1.1.0-darwin-arm64.tar.gz
+tar -xzf ~/code/dbdump/bin/dbdump-v1.1.0-darwin-arm64.tar.gz
 ./dbdump-darwin-arm64 --help
 ```
 

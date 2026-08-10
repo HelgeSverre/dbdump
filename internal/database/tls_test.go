@@ -26,12 +26,14 @@ func TestTLSDSNParam(t *testing.T) {
 	}{
 		{name: "unset", cfg: TLSConfig{}, want: ""},
 		{name: "disabled", cfg: TLSConfig{Mode: TLSDisabled}, want: "false"},
+		{name: "disabled overrides skip verify", cfg: TLSConfig{Mode: TLSDisabled, SkipVerify: true}, want: "false"},
 		{name: "preferred", cfg: TLSConfig{Mode: TLSPreferred}, want: "preferred"},
 		{name: "require", cfg: TLSConfig{Mode: TLSRequire}, want: "skip-verify"},
 		{name: "verify-identity", cfg: TLSConfig{Mode: TLSVerifyIdentity}, want: "true"},
 		{name: "skip-verify flag", cfg: TLSConfig{SkipVerify: true}, want: "skip-verify"},
 		{name: "verify-ca needs custom", cfg: TLSConfig{Mode: TLSVerifyCA}, wantCustom: true},
 		{name: "ca file needs custom", cfg: TLSConfig{Mode: TLSVerifyIdentity, CAFile: "/ca.pem"}, wantCustom: true},
+		{name: "server name infers verify identity", cfg: TLSConfig{ServerName: "db.internal"}, wantCustom: true},
 	}
 
 	for _, tc := range cases {
@@ -68,6 +70,10 @@ func TestTLSConfigValidate(t *testing.T) {
 		{name: "key without cert", cfg: TLSConfig{KeyFile: "/k.pem"}, wantErr: true},
 		{name: "cert and key ok", cfg: TLSConfig{CertFile: "/c.pem", KeyFile: "/k.pem"}},
 		{name: "skip-verify with verify mode", cfg: TLSConfig{Mode: TLSVerifyIdentity, SkipVerify: true}, wantErr: true},
+		{name: "disabled ignores incomplete client certificate", cfg: TLSConfig{Mode: TLSDisabled, CertFile: "/c.pem"}},
+		{name: "preferred with CA is ambiguous", cfg: TLSConfig{Mode: TLSPreferred, CAFile: "/ca.pem"}, wantErr: true},
+		{name: "preferred with client certificate is ambiguous", cfg: TLSConfig{Mode: TLSPreferred, CertFile: "/c.pem", KeyFile: "/k.pem"}, wantErr: true},
+		{name: "preferred with skip verify is ambiguous", cfg: TLSConfig{Mode: TLSPreferred, SkipVerify: true}, wantErr: true},
 	}
 
 	for _, tc := range cases {
@@ -95,8 +101,14 @@ func TestMySQLDumpTLSArgs(t *testing.T) {
 		{name: "skip-verify downgrades to required", cfg: TLSConfig{SkipVerify: true}, sslMode: true, want: []string{"--ssl-mode=REQUIRED"}},
 		{name: "mariadb fallback", cfg: TLSConfig{Mode: TLSRequire}, sslMode: false, want: []string{"--ssl"}},
 		{name: "mariadb disabled no flag", cfg: TLSConfig{Mode: TLSDisabled}, sslMode: false, want: nil},
+		{name: "disabled ignores TLS material", cfg: TLSConfig{Mode: TLSDisabled, CAFile: "/missing-ca.pem", CertFile: "/missing-cert.pem"}, sslMode: true,
+			want: []string{"--ssl-mode=DISABLED"}},
+		{name: "require ignores CA but keeps client certificate", cfg: TLSConfig{Mode: TLSRequire, CAFile: "/ca.pem", CertFile: "/c.pem", KeyFile: "/k.pem"}, sslMode: true,
+			want: []string{"--ssl-mode=REQUIRED", "--ssl-cert=/c.pem", "--ssl-key=/k.pem"}},
 		{name: "mtls all files", cfg: TLSConfig{Mode: TLSVerifyIdentity, CAFile: "/ca.pem", CertFile: "/c.pem", KeyFile: "/k.pem"}, sslMode: true,
 			want: []string{"--ssl-mode=VERIFY_IDENTITY", "--ssl-ca=/ca.pem", "--ssl-cert=/c.pem", "--ssl-key=/k.pem"}},
+		{name: "server name infers verify identity", cfg: TLSConfig{ServerName: "db.internal"}, sslMode: true,
+			want: []string{"--ssl-mode=VERIFY_IDENTITY"}},
 	}
 
 	for _, tc := range cases {
@@ -153,6 +165,81 @@ func TestBuildGoTLSConfigVerifyCASkipsHostname(t *testing.T) {
 	}
 	if cfg.VerifyConnection == nil {
 		t.Fatal("verify-ca must install a custom chain verifier")
+	}
+}
+
+func TestBuildGoTLSConfigServerNameInfersIdentityVerification(t *testing.T) {
+	t.Parallel()
+
+	cfg, err := buildGoTLSConfig(TLSConfig{ServerName: "db.internal"})
+	if err != nil {
+		t.Fatalf("buildGoTLSConfig returned error: %v", err)
+	}
+	if cfg.ServerName != "db.internal" {
+		t.Fatalf("ServerName = %q, want db.internal", cfg.ServerName)
+	}
+	if cfg.InsecureSkipVerify {
+		t.Fatal("server-name-only configuration must verify the hostname")
+	}
+}
+
+func TestBuildGoTLSConfigRequireWithClientCertSkipsServerVerification(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	_, certPEM, keyPEM := generateTestCerts(t)
+	certFile := writeTemp(t, dir, "client.pem", certPEM)
+	keyFile := writeTemp(t, dir, "client-key.pem", keyPEM)
+
+	cfg, err := buildGoTLSConfig(TLSConfig{
+		Mode:     TLSRequire,
+		CAFile:   filepath.Join(dir, "missing-ca.pem"),
+		CertFile: certFile,
+		KeyFile:  keyFile,
+	})
+	if err != nil {
+		t.Fatalf("buildGoTLSConfig returned error: %v", err)
+	}
+	if !cfg.InsecureSkipVerify {
+		t.Fatal("require must encrypt without verifying the server")
+	}
+	if cfg.RootCAs != nil {
+		t.Fatal("require must ignore CA material")
+	}
+	if len(cfg.Certificates) != 1 {
+		t.Fatalf("expected one client certificate, got %d", len(cfg.Certificates))
+	}
+}
+
+func TestTLSDisabledWithMaterialUsesPlaintextWithoutReadingFiles(t *testing.T) {
+	t.Parallel()
+
+	cfg := TLSConfig{
+		Mode:     TLSDisabled,
+		CAFile:   "/missing-ca.pem",
+		CertFile: "/missing-cert.pem",
+	}
+	got, err := tlsDSNParam(cfg)
+	if err != nil {
+		t.Fatalf("tlsDSNParam returned error: %v", err)
+	}
+	if got != "false" {
+		t.Fatalf("tlsDSNParam = %q, want false", got)
+	}
+	if err := registerCustomTLS(cfg); err != nil {
+		t.Fatalf("registerCustomTLS should ignore disabled TLS material: %v", err)
+	}
+}
+
+func TestPreferredRejectsCustomTLSMaterialInHelpers(t *testing.T) {
+	t.Parallel()
+
+	cfg := TLSConfig{Mode: TLSPreferred, CAFile: "/ca.pem"}
+	if _, err := tlsDSNParam(cfg); err == nil {
+		t.Fatal("tlsDSNParam should reject preferred with custom TLS material")
+	}
+	if _, err := mysqlDumpTLSArgs(cfg, true); err == nil {
+		t.Fatal("mysqlDumpTLSArgs should reject preferred with custom TLS material")
 	}
 }
 

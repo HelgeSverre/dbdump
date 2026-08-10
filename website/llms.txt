@@ -15,6 +15,13 @@ an agent that has never used dbdump can operate it from the information here.
 - dbdump connects to the database itself (Go driver) for inspection, and runs
   `mysqldump` for the actual dump. Nothing else is required.
 
+Verify both commands before configuring a connection:
+
+```bash
+dbdump version
+mysqldump --version
+```
+
 ## Install
 
 - Homebrew: `brew install helgesverre/tap/dbdump`
@@ -27,9 +34,9 @@ an agent that has never used dbdump can operate it from the information here.
 By default `dbdump dump` opens an interactive terminal UI to pick tables. That UI
 requires a TTY on both stdin and stdout; in a non-interactive environment
 (scripts, CI, agents) it exits with an error: "interactive mode requires a TTY;
-rerun with --auto". Always pass `--auto` (uses the smart default exclusions) or
-drive exclusions explicitly with `--exclude` / `--exclude-pattern`. Never rely on
-the interactive picker in automation.
+rerun with --auto". Always pass `--auto` in automation. Exact and pattern
+exclusions can be added alongside it with `--exclude` / `--exclude-pattern`;
+those flags do not disable the interactive picker by themselves.
 
 Errors are written to stderr prefixed with `Error:` and the process exits
 non-zero. A cancelled interactive selection exits 0 without dumping.
@@ -62,6 +69,13 @@ non-zero. A cancelled interactive selection exits 0 without dumping.
 
 Password resolution order (first non-empty wins): `-p` flag, then the selected
 profile's password, then `DBDUMP_MYSQL_PWD`, then `MYSQL_PWD`.
+
+Prefer an environment variable so the password is not exposed in shell history
+or the process arguments:
+
+```bash
+export DBDUMP_MYSQL_PWD='your-password'
+```
 
 ## Dump flags
 
@@ -121,8 +135,12 @@ Applies to both the inspection connection and the `mysqldump` subprocess.
 - `--tls-skip-verify` — encrypt but skip verification (dev/self-signed only;
   conflicts with verify-* modes).
 - `--tls-server-name <name>` — override the verified hostname; use behind an SSH
-  tunnel where the host becomes `127.0.0.1`.
+  tunnel where the host becomes `127.0.0.1`. By itself, this enables
+  `verify-identity` so the requested hostname is actually checked.
 - With no `--tls-*` flag, the connection is unencrypted (unchanged default).
+- An explicit `disabled` mode stays plaintext even if a saved profile contains
+  certificate paths. Custom TLS options cannot be combined with `preferred`;
+  choose `require`, `verify-ca`, or `verify-identity` instead.
 
 ## Restore a dump
 
@@ -133,15 +151,17 @@ Applies to both the inspection connection and the `mysqldump` subprocess.
 ## Examples
 
 ```bash
-# Non-interactive dump with smart default exclusions (agent-friendly)
+# 1. Set credentials without putting them in process arguments
 export DBDUMP_MYSQL_PWD=secret
-dbdump dump -H localhost -u root -d mydb --auto
 
-# Inspect tables first
+# 2. Confirm connectivity and inspect table sizes (read-only)
 dbdump list -H localhost -u root -d mydb
 
-# Preview the plan without writing anything
-dbdump dump -H localhost -u root -d mydb --dry-run
+# 3. Preview the exact non-interactive plan; this writes nothing
+dbdump dump -H localhost -u root -d mydb --auto --dry-run
+
+# 4. Run the reviewed plan
+dbdump dump -H localhost -u root -d mydb --auto
 
 # Custom exclusions + gzip
 dbdump dump -H localhost -u root -d mydb --auto \
@@ -162,6 +182,22 @@ dbdump dump -H db.example.com -u root -d mydb --auto \
 dbdump config add prod -H db.example.com -u readonly -d myapp
 dbdump dump --profile prod --auto
 ```
+
+## Agent safety checklist
+
+1. Confirm the target host and database name before running a dump.
+2. Use `list`, then `--auto --dry-run`, before the real command.
+3. Remember that excludes remove row data only; schema is always preserved.
+4. Use an explicit `-o` path in automation and check the command's exit status.
+5. Treat saved profiles and dump files as sensitive even though they are mode 0600.
+
+## Troubleshooting
+
+- `interactive mode requires a TTY`: add `--auto`, including to dry runs.
+- `mysqldump is required`: install a MySQL-compatible client and verify it is on `PATH`.
+- Authentication failures: check `DBDUMP_MYSQL_PWD`, the selected profile, user, host, and port.
+- TLS failures: start with the intended mode; use `--tls-server-name` behind an SSH tunnel when certificate identity differs from `127.0.0.1`.
+- Before retrying a failed command, read the `Error:` message on stderr. Failed dumps do not replace the destination file.
 
 ## Docs
 

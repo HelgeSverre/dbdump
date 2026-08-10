@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **[TLS]** Explicit TLS modes now keep their documented semantics when certificate options are also present: `disabled` remains plaintext, `require` does not begin verifying the server, and ambiguous `preferred` plus custom TLS options is rejected before connecting. A standalone `--tls-server-name` now correctly enables identity verification instead of being ignored under `verify-ca` semantics.
+- **[Docs]** Corrected non-interactive dry-run examples and website copy buttons so agents and scripts use `--auto --dry-run` consistently.
+- **[Verification]** Removed stale release-test paths and hardened password process-list checks against vacuous passes.
+
+### Changed
+- **[Agents]** Expanded the deployed `/llms.txt` with a safe setup sequence, validation steps, operational guidance, and troubleshooting.
+
+### Dependencies
+- Bumped `github.com/klauspost/compress` from 1.19.1 to 1.19.2 (zstd correctness, race, and arm64 decoder fixes plus arm64 huff0 assembly).
+
 ## [1.4.1] - 2026-07-27
 
 ### Dependencies

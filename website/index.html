@@ -278,9 +278,9 @@ dbdump dump -H mysql80 -P 3306 -u root -d mydb \
 dbdump dump -H db.example.com -u root -d mydb \
   --tls-mode verify-identity --tls-ca /etc/ssl/certs/ca.pem --auto
 
-# Dry run (preview the full plan: sizes, rows, data vs structure-only)
-dbdump dump -H localhost -u root -d mydb --dry-run</code></pre>
-                    <button class="copy-btn" data-copy="dbdump dump -H localhost -u root -d mydb --auto">Copy</button>
+# Non-interactive dry run (preview sizes, rows, and exclusions)
+dbdump dump -H localhost -u root -d mydb --auto --dry-run</code></pre>
+                    <button class="copy-btn" data-copy="dbdump dump -H localhost -u root -d mydb --auto --dry-run">Copy</button>
                 </div>
 
                 <h4>list</h4>
@@ -354,6 +354,7 @@ dbdump config remove prod</code></pre>
                         <tr><td><code>--tls-server-name</code></td><td>Override the hostname verified against the certificate</td></tr>
                     </tbody>
                 </table>
+                <p>An explicit <code>disabled</code> mode stays plaintext and ignores certificate options. Custom TLS options require <code>require</code>, <code>verify-ca</code>, or <code>verify-identity</code>; they cannot be combined with opportunistic <code>preferred</code> mode.</p>
             </article>
 
             <article class="guide-section">
@@ -517,8 +518,9 @@ dbdump dump -H db.example.com -u readonly -d myapp_prod --auto -o dev-db.sql">Co
                 <h4>Preview before dumping</h4>
                 <div class="code-block">
                     <pre><code>dbdump list -H localhost -u root -d mydb        # See table sizes
-dbdump dump -H localhost -u root -d mydb --dry-run   # Preview exclusions</code></pre>
-                    <button class="copy-btn" data-copy="dbdump list -H localhost -u root -d mydb">Copy</button>
+dbdump dump -H localhost -u root -d mydb --auto --dry-run   # Preview exclusions</code></pre>
+                    <button class="copy-btn" data-copy="dbdump list -H localhost -u root -d mydb
+dbdump dump -H localhost -u root -d mydb --auto --dry-run">Copy</button>
                 </div>
 
                 <h4>Laravel project with extra exclusions</h4>

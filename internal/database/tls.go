@@ -42,7 +42,9 @@ func (t TLSConfig) resolveMode() (string, error) {
 		switch {
 		case t.SkipVerify:
 			mode = TLSRequire
-		case t.CAFile != "" || t.CertFile != "" || t.KeyFile != "" || t.ServerName != "":
+		case t.ServerName != "":
+			mode = TLSVerifyIdentity
+		case t.CAFile != "" || t.CertFile != "" || t.KeyFile != "":
 			mode = TLSVerifyCA
 		default:
 			return "", nil
@@ -63,6 +65,15 @@ func (t TLSConfig) Validate() error {
 	if err != nil {
 		return err
 	}
+	// An explicit disabled mode is authoritative. This also lets a profile with
+	// certificate paths be temporarily disabled without requiring those files to
+	// exist on the current machine.
+	if mode == TLSDisabled {
+		return nil
+	}
+	if mode == TLSPreferred && (t.SkipVerify || t.CAFile != "" || t.CertFile != "" || t.KeyFile != "" || t.ServerName != "") {
+		return errors.New("--tls-mode preferred cannot be combined with custom TLS options; use require, verify-ca, or verify-identity")
+	}
 	if (t.CertFile == "") != (t.KeyFile == "") {
 		return errors.New("--tls-cert and --tls-key must be provided together")
 	}
@@ -74,10 +85,19 @@ func (t TLSConfig) Validate() error {
 
 // needsCustomTLS reports whether the go-sql-driver needs a registered *tls.Config
 // rather than a built-in token. verify-ca always needs one (the driver has no
-// built-in "verify chain but not hostname" mode), as does anything with a custom
-// CA, client cert, or server name.
+// built-in "verify chain but not hostname" mode). Require only needs a custom
+// config when a client certificate must be loaded.
 func (t TLSConfig) needsCustomTLS(mode string) bool {
-	if t.CAFile != "" || t.CertFile != "" || t.KeyFile != "" || t.ServerName != "" {
+	if mode == TLSDisabled || mode == TLSPreferred {
+		return false
+	}
+	if t.CertFile != "" || t.KeyFile != "" {
+		return true
+	}
+	if mode == TLSRequire {
+		return false
+	}
+	if t.CAFile != "" || t.ServerName != "" {
 		return true
 	}
 	if t.SkipVerify {
@@ -100,12 +120,18 @@ func customTLSName(t TLSConfig) string {
 // tlsDSNParam returns the value for the go-sql-driver `tls` DSN parameter. An
 // empty string means "add no tls parameter" (unchanged, plaintext behavior).
 func tlsDSNParam(t TLSConfig) (string, error) {
+	if err := t.Validate(); err != nil {
+		return "", err
+	}
 	mode, err := t.resolveMode()
 	if err != nil {
 		return "", err
 	}
 	if mode == "" {
 		return "", nil
+	}
+	if mode == TLSDisabled {
+		return "false", nil
 	}
 	if t.needsCustomTLS(mode) {
 		return customTLSName(t), nil
@@ -115,8 +141,6 @@ func tlsDSNParam(t TLSConfig) (string, error) {
 	}
 
 	switch mode {
-	case TLSDisabled:
-		return "false", nil
 	case TLSPreferred:
 		return "preferred", nil
 	case TLSRequire:
@@ -130,18 +154,24 @@ func tlsDSNParam(t TLSConfig) (string, error) {
 
 // buildGoTLSConfig builds the *tls.Config for the cases that need a custom one.
 func buildGoTLSConfig(t TLSConfig) (*tls.Config, error) {
+	if err := t.Validate(); err != nil {
+		return nil, err
+	}
 	mode, err := t.resolveMode()
 	if err != nil {
 		return nil, err
 	}
 
 	cfg := &tls.Config{MinVersion: tls.VersionTLS12}
-	if t.ServerName != "" {
+	if mode == TLSDisabled {
+		return cfg, nil
+	}
+	if mode == TLSVerifyIdentity && t.ServerName != "" {
 		cfg.ServerName = t.ServerName
 	}
 
 	var rootCAs *x509.CertPool
-	if t.CAFile != "" {
+	if (mode == TLSVerifyCA || mode == TLSVerifyIdentity) && t.CAFile != "" {
 		pemData, err := os.ReadFile(t.CAFile)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read TLS CA file: %w", err)
@@ -163,6 +193,8 @@ func buildGoTLSConfig(t TLSConfig) (*tls.Config, error) {
 
 	switch {
 	case t.SkipVerify:
+		cfg.InsecureSkipVerify = true
+	case mode == TLSRequire:
 		cfg.InsecureSkipVerify = true
 	case mode == TLSVerifyCA:
 		// Verify the chain against the roots but skip the hostname check.
@@ -187,6 +219,9 @@ func buildGoTLSConfig(t TLSConfig) (*tls.Config, error) {
 // so the DSN's `tls=<name>` parameter resolves. It is a no-op when TLS is not
 // configured or a built-in token suffices.
 func registerCustomTLS(t TLSConfig) error {
+	if err := t.Validate(); err != nil {
+		return err
+	}
 	mode, err := t.resolveMode()
 	if err != nil {
 		return err
@@ -208,6 +243,9 @@ func registerCustomTLS(t TLSConfig) error {
 // mysqlDumpTLSArgs maps the TLS config onto mysqldump command-line flags. When the
 // client lacks --ssl-mode (e.g. MariaDB's mariadb-dump) it falls back to --ssl.
 func mysqlDumpTLSArgs(t TLSConfig, sslModeSupported bool) ([]string, error) {
+	if err := t.Validate(); err != nil {
+		return nil, err
+	}
 	mode, err := t.resolveMode()
 	if err != nil {
 		return nil, err
@@ -215,7 +253,7 @@ func mysqlDumpTLSArgs(t TLSConfig, sslModeSupported bool) ([]string, error) {
 	if mode == "" {
 		return nil, nil
 	}
-	if t.SkipVerify {
+	if t.SkipVerify && mode != TLSDisabled {
 		mode = TLSRequire
 	}
 
@@ -234,7 +272,10 @@ func mysqlDumpTLSArgs(t TLSConfig, sslModeSupported bool) ([]string, error) {
 		args = append(args, "--ssl")
 	}
 
-	if t.CAFile != "" {
+	if mode == TLSDisabled {
+		return args, nil
+	}
+	if (mode == TLSVerifyCA || mode == TLSVerifyIdentity) && t.CAFile != "" {
 		args = append(args, "--ssl-ca="+t.CAFile)
 	}
 	if t.CertFile != "" {

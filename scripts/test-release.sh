@@ -4,6 +4,10 @@ set -euo pipefail
 # Test release build locally
 # Simulates what GitHub Actions does
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+cd "$PROJECT_ROOT"
+
 echo "========================================="
 echo "Local Release Build Test"
 echo "========================================="
@@ -26,7 +30,11 @@ echo ""
 # Generate checksums
 echo "🔐 Generating checksums..."
 cd bin
-sha256sum dbdump-* > checksums.txt
+if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum dbdump-* > checksums.txt
+else
+    shasum -a 256 dbdump-* > checksums.txt
+fi
 echo "✓ Checksums generated:"
 cat checksums.txt
 echo ""
@@ -35,23 +43,23 @@ echo ""
 echo "📦 Creating release archives..."
 
 # macOS AMD64
-tar -czf dbdump-${VERSION}-darwin-amd64.tar.gz dbdump-darwin-amd64
+tar -czf "dbdump-${VERSION}-darwin-amd64.tar.gz" dbdump-darwin-amd64
 echo "✓ Created dbdump-${VERSION}-darwin-amd64.tar.gz"
 
 # macOS ARM64
-tar -czf dbdump-${VERSION}-darwin-arm64.tar.gz dbdump-darwin-arm64
+tar -czf "dbdump-${VERSION}-darwin-arm64.tar.gz" dbdump-darwin-arm64
 echo "✓ Created dbdump-${VERSION}-darwin-arm64.tar.gz"
 
 # Linux AMD64
-tar -czf dbdump-${VERSION}-linux-amd64.tar.gz dbdump-linux-amd64
+tar -czf "dbdump-${VERSION}-linux-amd64.tar.gz" dbdump-linux-amd64
 echo "✓ Created dbdump-${VERSION}-linux-amd64.tar.gz"
 
 # Linux ARM64
-tar -czf dbdump-${VERSION}-linux-arm64.tar.gz dbdump-linux-arm64
+tar -czf "dbdump-${VERSION}-linux-arm64.tar.gz" dbdump-linux-arm64
 echo "✓ Created dbdump-${VERSION}-linux-arm64.tar.gz"
 
 # Windows AMD64
-zip -q dbdump-${VERSION}-windows-amd64.zip dbdump-windows-amd64.exe
+zip -q "dbdump-${VERSION}-windows-amd64.zip" dbdump-windows-amd64.exe
 echo "✓ Created dbdump-${VERSION}-windows-amd64.zip"
 
 cd ..
@@ -59,7 +67,7 @@ echo ""
 
 # List release artifacts
 echo "📋 Release artifacts:"
-ls -lh bin/dbdump-${VERSION}-*
+ls -lh bin/dbdump-"${VERSION}"-*
 echo ""
 
 # Test binary execution
@@ -88,11 +96,10 @@ echo ""
 
 # Calculate total size
 echo "💾 Archive sizes:"
-du -sh bin/dbdump-${VERSION}-* | sort -h
+du -sh bin/dbdump-"${VERSION}"-* | sort -h
 echo ""
 
-TOTAL_SIZE=$(du -sh bin/dbdump-${VERSION}-* | awk '{sum+=$1} END {print sum}')
-echo "Total release size: ~$(du -sh bin/dbdump-${VERSION}-* | awk '{s+=$1}END{print s}')M (compressed)"
+echo "Total release size: $(du -ch bin/dbdump-"${VERSION}"-* | tail -1 | awk '{print $1}') (compressed)"
 echo ""
 
 echo "========================================="
@@ -103,7 +110,7 @@ echo "Release artifacts ready in: bin/"
 echo ""
 echo "To test extraction:"
 echo "  cd /tmp"
-echo "  tar -xzf ~/code/dump-tool/bin/dbdump-${VERSION}-darwin-arm64.tar.gz"
+echo "  tar -xzf ${PROJECT_ROOT}/bin/dbdump-${VERSION}-darwin-arm64.tar.gz"
 echo "  ./dbdump-darwin-arm64 --help"
 echo ""
 echo "To create actual release:"

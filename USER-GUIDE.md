@@ -300,7 +300,7 @@ dbdump dump [flags]
 | `--tls-skip-verify` | Encrypt but skip certificate verification (insecure) | false |
 | `--tls-server-name` | Override the hostname verified against the certificate | - |
 
-TLS applies to both the inspection connection and the `mysqldump` subprocess. Modes mirror MySQL's `ssl-mode`. Behind an SSH tunnel the host becomes `127.0.0.1`, so use `--tls-server-name` to pin the real certificate name. With no `--tls-*` flag, connections are unencrypted as before.
+TLS applies to both the inspection connection and the `mysqldump` subprocess. Modes mirror MySQL's `ssl-mode`. An explicit `disabled` mode remains plaintext and ignores certificate options. Custom CA, client-certificate, skip-verification, and server-name options cannot be combined with opportunistic `preferred` mode; choose `require`, `verify-ca`, or `verify-identity` so the requested behavior is unambiguous. Behind an SSH tunnel the host becomes `127.0.0.1`, so use `--tls-server-name` to pin the real certificate name. With no `--tls-*` flag, connections are unencrypted as before.
 
 **Dump Flags:**
 
@@ -328,8 +328,8 @@ dbdump dump -H db.example.com -P 3306 -u dbuser -d mydb
 # With project config
 dbdump dump -H localhost -u root -d mydb --config ./project-config.yaml
 
-# Dry run to preview
-dbdump dump -H localhost -u root -d mydb --dry-run
+# Non-interactive dry run to preview
+dbdump dump -H localhost -u root -d mydb --auto --dry-run
 
 # Additional CLI excludes
 dbdump dump -H localhost -u root -d mydb --exclude users --exclude-pattern "test_*"
@@ -518,8 +518,8 @@ Check your database first:
 # See all tables and sizes
 dbdump list -H localhost -u root -d mydb
 
-# Do a dry run
-dbdump dump -H localhost -u root -d mydb --dry-run
+# Do a non-interactive dry run
+dbdump dump -H localhost -u root -d mydb --auto --dry-run
 
 # If happy, do the real dump
 dbdump dump -H localhost -u root -d mydb
@@ -641,7 +641,7 @@ Pattern matching uses glob syntax:
 dbdump list -H localhost -u root -d mydb
 
 # Dry run with pattern
-dbdump dump -H localhost -u root -d mydb --exclude-pattern "your_pattern_*" --dry-run
+dbdump dump -H localhost -u root -d mydb --auto --exclude-pattern "your_pattern_*" --dry-run
 ```
 
 ---
@@ -705,7 +705,7 @@ Changes take effect on the next dump.
 Yes! Use the `--dry-run` flag:
 
 ```bash
-dbdump dump -H localhost -u root -d mydb --dry-run
+dbdump dump -H localhost -u root -d mydb --auto --dry-run
 ```
 
 This shows exactly what would be excluded without creating a dump.
