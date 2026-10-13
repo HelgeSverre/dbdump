@@ -175,6 +175,9 @@ func validateDumpOutputPath(path string) error {
 	if err == nil && info.Mode()&os.ModeSymlink != 0 {
 		return fmt.Errorf("refusing to write dump output through symlink: %s", path)
 	}
+	if err == nil && !info.Mode().IsRegular() {
+		return fmt.Errorf("dump output must be a regular file: %s", path)
+	}
 	if err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to inspect dump output path: %w", err)
 	}
@@ -183,6 +186,10 @@ func validateDumpOutputPath(path string) error {
 }
 
 func replaceOutputFile(tempPath, finalPath string) error {
+	// Recheck before replacement in case the destination changed during dumping.
+	if err := validateDumpOutputPath(finalPath); err != nil {
+		return err
+	}
 	if err := renameFile(tempPath, finalPath); err == nil {
 		return nil
 	} else if !os.IsExist(err) {

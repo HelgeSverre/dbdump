@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -234,6 +235,34 @@ func TestDumpRejectsSymlinkOutputPath(t *testing.T) {
 	}
 }
 
+func TestDumpRejectsDirectoryOutputPath(t *testing.T) {
+	for _, populated := range []bool{false, true} {
+		t.Run(fmt.Sprintf("populated=%t", populated), func(t *testing.T) {
+			outputPath := filepath.Join(t.TempDir(), "dump.sql")
+			if err := os.Mkdir(outputPath, 0700); err != nil {
+				t.Fatal(err)
+			}
+			if populated {
+				if err := os.WriteFile(filepath.Join(outputPath, "keep"), []byte("keep me"), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			restore := stubMySQLDump(t, func(ctx context.Context, _ string, _ ...string) *exec.Cmd {
+				return exec.CommandContext(ctx, "sh", "-c", "printf 'dump'")
+			})
+			defer restore()
+			dumper := NewDumper(&DumpOptions{Connection: &Connection{Database: "testdb"}, OutputFile: outputPath})
+			if _, err := dumper.Dump(); err == nil {
+				t.Error("expected directory output to be rejected")
+			}
+			info, err := os.Stat(outputPath)
+			if err != nil || !info.IsDir() {
+				t.Fatalf("output directory was replaced: info=%v err=%v", info, err)
+			}
+		})
+	}
+}
+
 func TestDumpReplacesExistingOutputViaFallbackPath(t *testing.T) {
 	resetMySQLDumpFeatures()
 
@@ -286,6 +315,24 @@ func TestDumpReplacesExistingOutputViaFallbackPath(t *testing.T) {
 	}
 	if !bytes.Contains(data, []byte("CREATE TABLE users")) || !bytes.Contains(data, []byte("INSERT INTO users")) {
 		t.Fatalf("unexpected dump contents after fallback replace: %q", string(data))
+	}
+}
+
+func TestReplaceOutputFileRejectsDirectory(t *testing.T) {
+	dir := t.TempDir()
+	outputPath := filepath.Join(dir, "dump.sql")
+	tempPath := filepath.Join(dir, "dump.tmp")
+	if err := os.WriteFile(tempPath, []byte("dump"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(outputPath, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := replaceOutputFile(tempPath, outputPath); err == nil {
+		t.Fatal("expected replacement to reject a directory created during dumping")
+	}
+	if data, err := os.ReadFile(tempPath); err != nil || string(data) != "dump" {
+		t.Fatalf("temporary dump was changed: data=%q err=%v", data, err)
 	}
 }
 
