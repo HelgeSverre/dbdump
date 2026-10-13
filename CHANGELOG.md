@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **[Tests]** Added command-path coverage for include overrides and database restoration checks for retained audit data across MySQL 5.7/8.0/8.4 and MariaDB.
 
 ### Fixed
+- **[Restore]** Write triggers after table data so restoring rows does not fire triggers and duplicate audit records or change retained data. Restore tests now propagate failed assertions.
 - **[Dump]** Reject directories and other non-regular output destinations before dumping and recheck before replacement. Previously, the overwrite fallback could move or delete an existing directory.
 - **[Docs]** Corrected the local release-test command and the release workflow build instructions; updated changelog comparison links.
 

@@ -38,10 +38,11 @@
 
 ### How It Works
 
-dbdump uses a two-phase dump strategy:
+dbdump writes the dump in three phases:
 
 1. **Phase 1 - Structure**: Dumps the schema (CREATE TABLE statements) for ALL tables
 2. **Phase 2 - Data**: Dumps data only for tables you want to keep
+3. **Phase 3 - Triggers**: Creates triggers after loading data to prevent restore-time side effects
 
 This keeps the complete schema while excluding unwanted rows. If retained rows
 reference data from an excluded table, the resulting development dataset can

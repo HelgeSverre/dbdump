@@ -132,6 +132,9 @@ func (d *Dumper) Dump() (result *DumpResult, err error) {
 	if err = d.dumpData(ctx, writer, defaultsFile); err != nil {
 		return nil, fmt.Errorf("failed to dump data: %w", err)
 	}
+	if err = d.dumpTriggers(ctx, writer, defaultsFile); err != nil {
+		return nil, fmt.Errorf("failed to dump triggers: %w", err)
+	}
 
 	if err = writer.Flush(); err != nil {
 		return nil, fmt.Errorf("failed to flush output: %w", err)
@@ -295,7 +298,7 @@ func (d *Dumper) dumpStructure(ctx context.Context, writer io.Writer, defaultsFi
 	args := d.buildMySQLDumpArgs(defaultsFile)
 	args = append(args,
 		"--no-data",
-		"--triggers",
+		"--skip-triggers",
 		"--events",
 	)
 
@@ -347,6 +350,25 @@ func (d *Dumper) dumpData(ctx context.Context, writer io.Writer, defaultsFile st
 		return fmt.Errorf("mysqldump data failed: %w", err)
 	}
 
+	return nil
+}
+
+// dumpTriggers installs triggers after the data, so restoration cannot fire them
+// while loading the original rows.
+func (d *Dumper) dumpTriggers(ctx context.Context, writer io.Writer, defaultsFile string) error {
+	args := d.buildMySQLDumpArgs(defaultsFile)
+	args = append(args, "--no-data", "--no-create-info", "--triggers", "--skip-routines", "--skip-events")
+	args, err := appendMySQLDumpFeatureArgs(args, d.options.Connection.TLS)
+	if err != nil {
+		return err
+	}
+	args = append(args, d.options.Connection.Database)
+	cmd := execCommandContext(ctx, "mysqldump", args...)
+	cmd.Stdout = writer
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("mysqldump triggers failed: %w", err)
+	}
 	return nil
 }
 

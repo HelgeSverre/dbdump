@@ -363,20 +363,24 @@ dbdump includes smart defaults for common Laravel tables:
 - `pulse_*`
 - `*_cache`
 
-These defaults are always applied. Later layers can add more excludes, but they do not remove the built-ins.
+These defaults are always applied. Later layers can add more excludes. Use `--include <table>` to override any matching rule.
 
 ## How It Works
 
-dbdump uses a two-phase approach:
+dbdump writes the dump in three phases:
 
 1. **Phase 1: Structure Dump**
     - Dumps complete schema for ALL tables
     - Preserves foreign-key definitions and other table relationships
-    - Uses `mysqldump --no-data`
+    - Uses `mysqldump --no-data --skip-triggers`
 
 2. **Phase 2: Data Dump**
     - Dumps data for all tables EXCEPT excluded ones
     - Uses `mysqldump --no-create-info --ignore-table=...`
+
+3. **Phase 3: Triggers**
+    - Writes trigger definitions after the data so loading rows does not fire them
+    - Uses `mysqldump --no-data --no-create-info --triggers`
 
 Result: A complete database dump with empty noisy tables.
 

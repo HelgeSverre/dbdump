@@ -372,8 +372,8 @@ func TestDumpUsesSingleSignalContextAcrossDump(t *testing.T) {
 	if trapCtx == nil {
 		t.Fatal("expected Dump to install a signal-aware context")
 	}
-	if len(cmdContexts) != 2 {
-		t.Fatalf("expected two mysqldump invocations, got %d", len(cmdContexts))
+	if len(cmdContexts) != 3 {
+		t.Fatalf("expected three mysqldump invocations, got %d", len(cmdContexts))
 	}
 	for i, ctx := range cmdContexts {
 		if ctx != trapCtx {
@@ -416,8 +416,8 @@ func TestDumpPassesTLSArgsToMySQLDump(t *testing.T) {
 	if _, err := dumper.Dump(); err != nil {
 		t.Fatalf("Dump returned error: %v", err)
 	}
-	if sslPasses != 2 {
-		t.Fatalf("expected --ssl-mode=REQUIRED in both mysqldump passes, saw %d", sslPasses)
+	if sslPasses != 3 {
+		t.Fatalf("expected --ssl-mode=REQUIRED in all mysqldump passes, saw %d", sslPasses)
 	}
 }
 
@@ -511,5 +511,30 @@ func assertDefaultsFileArg(t *testing.T, args []string) {
 
 	if len(args) == 0 || !strings.HasPrefix(args[0], "--defaults-extra-file=") {
 		t.Fatalf("expected mysqldump args to start with --defaults-extra-file, got %v", args)
+	}
+}
+
+func TestDumpWritesTriggersAfterData(t *testing.T) {
+	restore := stubMySQLDump(t, func(ctx context.Context, _ string, args ...string) *exec.Cmd {
+		content := "structure"
+		if containsArg(args, "--triggers") {
+			content = "trigger"
+		} else if containsArg(args, "--no-create-info") {
+			content = "data"
+		}
+		return exec.CommandContext(ctx, "sh", "-c", "printf '%s\\n' "+content)
+	})
+	defer restore()
+	output := filepath.Join(t.TempDir(), "dump.sql")
+	d := NewDumper(&DumpOptions{Connection: &Connection{Database: "testdb"}, OutputFile: output})
+	if _, err := d.Dump(); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(output)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != "structure\ndata\ntrigger\n" {
+		t.Fatalf("unsafe restore order: %q", data)
 	}
 }

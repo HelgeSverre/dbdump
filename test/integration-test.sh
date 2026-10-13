@@ -172,15 +172,15 @@ test_data_integrity() {
     # Test 8: Dump can be restored
     run_test "Dump restoration" "
         export DBDUMP_MYSQL_PWD=testpass123
-        ./bin/dbdump dump -H 127.0.0.1 -P $port -u root -d testdb --auto -o /tmp/test_restore.sql
-        mysql -h 127.0.0.1 -P $port -u root -ptestpass123 -e 'CREATE DATABASE IF NOT EXISTS testdb_restore;'
-        mysql -h 127.0.0.1 -P $port -u root -ptestpass123 testdb_restore < /tmp/test_restore.sql
-        users_count=\$(mysql -h 127.0.0.1 -P $port -u root -ptestpass123 -N -e 'SELECT COUNT(*) FROM testdb_restore.users;')
-        audits_count=\$(mysql -h 127.0.0.1 -P $port -u root -ptestpass123 -N -e 'SELECT COUNT(*) FROM testdb_restore.audits;')
-        events_count=\$(mysql -h 127.0.0.1 -P $port -u root -ptestpass123 -N -e \"SELECT COUNT(*) FROM information_schema.EVENTS WHERE EVENT_SCHEMA = 'testdb_restore' AND EVENT_NAME = 'cleanup_old_sessions';\")
-        [ \"\$users_count\" -gt 0 ]
-        [ \"\$audits_count\" -eq 0 ]
-        [ \"\$events_count\" -eq 1 ]
+        ./bin/dbdump dump -H 127.0.0.1 -P $port -u root -d testdb --auto -o /tmp/test_restore.sql &&
+        mysql -h 127.0.0.1 -P $port -u root -ptestpass123 -e 'CREATE DATABASE IF NOT EXISTS testdb_restore;' &&
+        mysql -h 127.0.0.1 -P $port -u root -ptestpass123 testdb_restore < /tmp/test_restore.sql &&
+        users_count=\$(mysql -h 127.0.0.1 -P $port -u root -ptestpass123 -N -e 'SELECT COUNT(*) FROM testdb_restore.users;') &&
+        audits_count=\$(mysql -h 127.0.0.1 -P $port -u root -ptestpass123 -N -e 'SELECT COUNT(*) FROM testdb_restore.audits;') &&
+        events_count=\$(mysql -h 127.0.0.1 -P $port -u root -ptestpass123 -N -e \"SELECT COUNT(*) FROM information_schema.EVENTS WHERE EVENT_SCHEMA = 'testdb_restore' AND EVENT_NAME = 'cleanup_old_sessions';\") &&
+        [ \"\$users_count\" -gt 0 ] &&
+        [ \"\$audits_count\" -eq 0 ] &&
+        [ \"\$events_count\" -eq 1 ] &&
         mysql -h 127.0.0.1 -P $port -u root -ptestpass123 -e 'DROP DATABASE testdb_restore;'
     "
 }
