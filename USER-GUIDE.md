@@ -126,7 +126,11 @@ Configurations are merged in this order:
 3. **Project-specific config** (specified with `--config` flag)
 4. **CLI flags** (`--exclude`, `--exclude-pattern`)
 
-Later layers can add exclusions, but they do not remove earlier ones.
+Later layers can add exclusions, but they do not remove earlier ones. Use `--include <table>` to keep a table's data despite any matching rule. Names are exact and case-sensitive; repeat the flag for multiple tables. Interactive selection starts with these tables included, and you can still change the selection.
+
+```bash
+dbdump dump -u root -d mydb --auto --include audits --include sessions
+```
 
 ### Default Excludes
 
@@ -309,6 +313,7 @@ TLS applies to both the inspection connection and the `mysqldump` subprocess. Mo
 | `--config` | `-c` | Project config file | - |
 | `--exclude` | - | Exclude specific table (repeatable) | - |
 | `--exclude-pattern` | - | Exclude pattern (repeatable) | - |
+| `--include` | - | Keep this table's data even when a rule excludes it (repeatable) | - |
 | `--auto` | - | Use defaults without interaction | false |
 | `--dry-run` | - | Preview the full dump plan (per-table size/rows, data vs structure-only, totals, resolved output) without dumping | false |
 

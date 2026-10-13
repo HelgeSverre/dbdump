@@ -98,7 +98,7 @@ Small dataset (~10MB) generated on each database with:
 
 ### Test Coverage
 
-**56 total tests** (14 per database):
+**60 total tests** (15 per database):
 - Security (password hiding, file permissions)
 - Data integrity (triggers, events, restoration, and explicit routine omission)
 - Exclusion logic (structure preserved, data excluded)

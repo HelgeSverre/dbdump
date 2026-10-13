@@ -225,8 +225,8 @@ Tests Failed: 0
 ========================================
 Test Results
 ========================================
-Tests Run:    56
-Tests Passed: 56
+Tests Run:    60
+Tests Passed: 60
 Tests Failed: 0
 ========================================
 
@@ -355,7 +355,7 @@ The implementation detects supported flags from `mysqldump --help` and only appl
 5. ✓ Code doesn't use `-p<password>` pattern
 6. ✓ Code uses temporary defaults-extra-file auth
 
-### Integration Tests (14 tests × 4 databases = 56 tests)
+### Integration Tests (15 tests × 4 databases = 60 tests)
 
 **Per Database:**
 1. ✓ Password not in process list
@@ -372,6 +372,7 @@ The implementation detects supported flags from `mysqldump --help` and only appl
 12. ✓ List command works
 13. ✓ Dry run mode works
 14. ✓ Custom output file works
+15. ✓ `--include` overrides exclusions and restores the retained audit rows
 
 > **Note:** Stored procedures are created in the fixture, but the dump path intentionally omits routines for cross-version compatibility.
 

@@ -211,6 +211,18 @@ test_exclusion_logic() {
         ./bin/dbdump dump -H 127.0.0.1 -P $port -u root -d testdb --auto -o /tmp/test_userdata.sql
         grep -q 'INSERT INTO.*users' /tmp/test_userdata.sql
     "
+
+    run_test "Included audit data survives restoration" "
+        export DBDUMP_MYSQL_PWD=testpass123
+        ./bin/dbdump dump -H 127.0.0.1 -P $port -u root -d testdb --auto --exclude audits --include audits -o /tmp/test_include.sql &&
+        mysql -h 127.0.0.1 -P $port -u root -ptestpass123 -e 'DROP DATABASE IF EXISTS testdb_include_restore; CREATE DATABASE testdb_include_restore;' &&
+        mysql -h 127.0.0.1 -P $port -u root -ptestpass123 testdb_include_restore < /tmp/test_include.sql &&
+        source_count=\$(mysql -h 127.0.0.1 -P $port -u root -ptestpass123 -N -e 'SELECT COUNT(*) FROM testdb.audits;') &&
+        restored_count=\$(mysql -h 127.0.0.1 -P $port -u root -ptestpass123 -N -e 'SELECT COUNT(*) FROM testdb_include_restore.audits;') &&
+        [ \"\$source_count\" -gt 0 ] &&
+        [ \"\$source_count\" -eq \"\$restored_count\" ] &&
+        mysql -h 127.0.0.1 -P $port -u root -ptestpass123 -e 'DROP DATABASE testdb_include_restore;'
+    "
 }
 
 test_cli_features() {

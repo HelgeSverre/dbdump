@@ -209,6 +209,7 @@ dbdump dump -H 127.0.0.1 -P 3306 -u root -d mydb \
 -c, --config           Config file path
     --exclude          Exclude specific table data (repeatable)
     --exclude-pattern  Exclude tables matching pattern (repeatable)
+    --include          Keep this table's data even when a rule excludes it (repeatable)
     --auto             Use smart defaults without interaction
     --dry-run          Show what would be dumped without dumping
     --compress         Compression format: auto, none, gzip, zstd

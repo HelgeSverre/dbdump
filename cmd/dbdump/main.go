@@ -77,6 +77,7 @@ type dumpFlags struct {
 	ConfigFile      string
 	ExcludeTables   []string
 	ExcludePatterns []string
+	IncludeTables   []string
 	AutoMode        bool
 	DryRun          bool
 	Compression     string
@@ -203,6 +204,7 @@ sessions, cache) while preserving their structure.`,
 	dumpCmd.Flags().StringVarP(&opts.ConfigFile, "config", "c", "", "Config file path")
 	dumpCmd.Flags().StringArrayVar(&opts.ExcludeTables, "exclude", []string{}, "Exclude specific table data (repeatable)")
 	dumpCmd.Flags().StringArrayVar(&opts.ExcludePatterns, "exclude-pattern", []string{}, "Exclude tables matching pattern (repeatable)")
+	dumpCmd.Flags().StringArrayVar(&opts.IncludeTables, "include", []string{}, "Keep this table's data even when a rule excludes it (repeatable)")
 	dumpCmd.Flags().BoolVar(&opts.AutoMode, "auto", false, "Use smart defaults without interaction")
 	dumpCmd.Flags().BoolVar(&opts.DryRun, "dry-run", false, "Show what would be dumped without dumping")
 	dumpCmd.Flags().StringVar(&opts.Compression, "compress", "auto", "Compression format: auto, none, gzip, zstd")
@@ -317,7 +319,7 @@ func runDump(connFlags connectionFlags, opts dumpFlags) error {
 	for i, info := range tablesInfo {
 		tableNames[i] = info.Name
 	}
-	preSelected := matcher.FilterTables(tableNames)
+	preSelected := dropIncluded(matcher.FilterTables(tableNames), opts.IncludeTables)
 
 	finalExcludes, err := resolveExcludes(tablesInfo, preSelected, opts.AutoMode)
 	if err != nil {
@@ -570,6 +572,27 @@ func (c connectionFlags) toConnection() *database.Connection {
 		SSH:      sshConfig,
 		TLS:      c.TLS,
 	}
+}
+
+// dropIncluded removes --include names from the exclusion set. Every exclusion
+// layer only adds (built-in defaults, ~/.dbdump.yaml, --config, --exclude,
+// --exclude-pattern), so this is the single subtraction: a table named here
+// keeps its data no matter which layer matched it.
+func dropIncluded(excluded, included []string) []string {
+	if len(included) == 0 {
+		return excluded
+	}
+	keep := make(map[string]struct{}, len(included))
+	for _, name := range included {
+		keep[name] = struct{}{}
+	}
+	kept := make([]string, 0, len(excluded))
+	for _, name := range excluded {
+		if _, ok := keep[name]; !ok {
+			kept = append(kept, name)
+		}
+	}
+	return kept
 }
 
 func buildExcludeConfig(opts dumpFlags) (config.ExcludeConfig, error) {

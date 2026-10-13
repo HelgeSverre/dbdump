@@ -826,3 +826,47 @@ func stubPrintSummary(t *testing.T, fn func(string, int, time.Duration, string))
 		printSummary = original
 	})
 }
+
+func TestDropIncluded(t *testing.T) {
+	excluded := []string{"activity_log", "sessions", "cache"}
+
+	if got := dropIncluded(excluded, nil); len(got) != 3 {
+		t.Fatalf("no includes should leave the set alone, got %v", got)
+	}
+
+	got := dropIncluded(excluded, []string{"sessions", "never_excluded"})
+	want := []string{"activity_log", "cache"}
+	if len(got) != len(want) {
+		t.Fatalf("dropIncluded() = %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("dropIncluded() = %v, want %v", got, want)
+		}
+	}
+}
+
+func TestDumpCommandIncludesOverrideExclusions(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	stubOpenInspection(t, func(*database.Connection) (inspectionSession, tableInspector, error) {
+		return &fakeSession{}, fakeInspector{tables: []database.TableInfo{{Name: "audits"}, {Name: "sessions"}, {Name: "cache"}, {Name: "users"}}}, nil
+	})
+	stubStartSSHTunnel(t, func(context.Context, *database.Connection) (func() error, error) { return nil, nil })
+	stubCheckMySQLDump(t, func() error { return nil })
+	stubPrintInfo(t, func(string) {})
+	stubPrintSuccess(t, func(string) {})
+	stubPrintSummary(t, func(string, int, time.Duration, string) {})
+	var excludes []string
+	stubNewDumper(t, func(opts *database.DumpOptions) dumpRunner {
+		excludes = opts.ExcludeTables
+		return fakeDumper{result: &database.DumpResult{}}
+	})
+	cmd := newRootCmd()
+	cmd.SetArgs([]string{"dump", "-u", "root", "-d", "testdb", "--auto", "--exclude", "audits", "--exclude-pattern", "session*", "--include", "audits", "--include", "sessions", "--include", "unknown"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(excludes, []string{"cache"}) {
+		t.Fatalf("excludes = %v, want [cache]", excludes)
+	}
+}
