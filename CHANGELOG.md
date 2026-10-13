@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-10-13
+
+### Added
+- **[CLI]** Added repeatable `--include <table>` overrides to retain data excluded by built-in defaults, config files, or CLI exclusion rules. Interactive mode starts with those tables included.
+- **[Tests]** Added command-path coverage for include overrides and database restoration checks for retained audit data across MySQL 5.7/8.0/8.4 and MariaDB.
+
+### Fixed
+- **[Dump]** Reject directories and other non-regular output destinations before dumping and recheck before replacement. Previously, the overwrite fallback could move or delete an existing directory.
+- **[Docs]** Corrected the local release-test command and the release workflow build instructions; updated changelog comparison links.
+
+### Dependencies
+- Bumped `github.com/go-sql-driver/mysql` from 1.10.0 to 1.10.1.
+- Bumped `github.com/klauspost/compress` from 1.19.2 to 1.20.1.
+- Bumped `golang.org/x/term` from 0.45.0 to 0.47.0 and indirect `golang.org/x/sys` from 0.47.0 to 0.49.0.
+
 ## [1.4.2] - 2026-08-10
 
 ### Fixed
@@ -357,7 +372,9 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ---
 
 <!-- Version comparison links -->
-[Unreleased]: https://github.com/helgesverre/dbdump/compare/v1.4.1...HEAD
+[Unreleased]: https://github.com/helgesverre/dbdump/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/helgesverre/dbdump/compare/v1.4.2...v1.5.0
+[1.4.2]: https://github.com/helgesverre/dbdump/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/helgesverre/dbdump/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/helgesverre/dbdump/compare/v1.3.2...v1.4.0
 [1.3.2]: https://github.com/helgesverre/dbdump/compare/v1.3.1...v1.3.2

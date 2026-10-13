@@ -6,7 +6,7 @@ Before pushing a release tag to GitHub, you can test the entire release build pr
 
 ```bash
 # Test the release build process
-just test-release VERSION=v1.1.0-test
+just test-release v1.1.0-test
 ```
 
 This simulates what GitHub Actions will do:

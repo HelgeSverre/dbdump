@@ -195,7 +195,7 @@ The verification step should catch this, but if not:
 
 ### Build Process
 
-The release workflow uses `just build-all` which:
+The release workflow runs `go build` directly for each platform (the local equivalent is `just build-all`):
 1. Sets version info via ldflags
 2. Cross-compiles for 5 platforms
 3. Outputs to `bin/` directory
