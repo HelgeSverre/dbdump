@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1] - 2026-11-23
+
+### Dependencies
+- Bumped `github.com/go-sql-driver/mysql` from 1.10.1 to 1.10.2.
+- Bumped `github.com/klauspost/compress` from 1.20.1 to 1.20.5.
+- Bumped `golang.org/x/term` from 0.47.0 to 0.48.0 and indirect `golang.org/x/sys` from 0.49.0 to 0.50.0.
+
 ## [1.5.0] - 2026-10-13
 
 ### Added
@@ -373,7 +380,8 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ---
 
 <!-- Version comparison links -->
-[Unreleased]: https://github.com/helgesverre/dbdump/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/helgesverre/dbdump/compare/v1.5.1...HEAD
+[1.5.1]: https://github.com/helgesverre/dbdump/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/helgesverre/dbdump/compare/v1.4.2...v1.5.0
 [1.4.2]: https://github.com/helgesverre/dbdump/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/helgesverre/dbdump/compare/v1.4.0...v1.4.1
