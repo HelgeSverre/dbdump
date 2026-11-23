@@ -5,7 +5,7 @@ go 1.26.1
 require (
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/go-sql-driver/mysql v1.10.2
-	github.com/klauspost/compress v1.20.1
+	github.com/klauspost/compress v1.20.5
 	github.com/spf13/cobra v1.10.2
 	golang.org/x/term v0.48.0
 	gopkg.in/yaml.v3 v3.0.1
